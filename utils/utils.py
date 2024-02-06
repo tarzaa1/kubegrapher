@@ -16,7 +16,13 @@ def _placeholders(properties=None, kwargs=None):
         return kwargs_placeholders
     else:
         return ''
+    
+def _to_placeholders(properties):
+    return ', '.join(
+        [f'{key}: $to_{key}' for key in properties.keys()])
 
+def to_properties(properties):
+    return {f'to_{key}': value for key, value in properties.items()}
 
 def merge_node(type, properties=None, **kwargs):
     placeholders = _placeholders(properties, kwargs)
@@ -26,8 +32,22 @@ def merge_node(type, properties=None, **kwargs):
     """
     return query
 
+def delete_node(type, id=None, **kwargs):
+    if id is not None:
+        query = f"""
+        MATCH (node:{type} {{id: node_id}})
+        DETACH DELETE node
+        """
+    else:
+        placeholders = _placeholders(kwargs=kwargs)
+        query = f"""
+        MATCH (node:{type} {{{placeholders}}})
+        DETACH DELETE node
+        """
+    return query
 
-def merge_relationship(type, from_type, to_type, properties=None, directed=True, **kwargs):
+
+def merge_relationship(type: str, from_type: str, to_type: str, properties: dict[str: any] = None, directed = True, **kwargs):
     placeholders = _placeholders(properties=properties, kwargs=kwargs)
     if directed:
         arrow = '>'
@@ -38,4 +58,20 @@ def merge_relationship(type, from_type, to_type, properties=None, directed=True,
     MERGE p = (n0)-[relation:{type} {{{placeholders}}}]-{arrow}(n1)
     RETURN p
     """
+    return query
+
+
+def merge_relationship_generic(type: str, from_type: str, to_type: str, to_properties: dict[str: any], properties: dict[str: any] = None, directed = True, **kwargs):
+    placeholders = _placeholders(properties=properties, kwargs=kwargs)
+    to_placeholders = _to_placeholders(to_properties)
+    if directed:
+        arrow = '>'
+    else:
+        arrow = ''
+    query = f"""
+    MATCH (n0:{from_type} {{id: $from_id}}), (n1:{to_type} {{{to_placeholders}}})
+    MERGE p = (n0)-[relation:{type} {{{placeholders}}}]-{arrow}(n1)
+    RETURN p
+    """
+
     return query
