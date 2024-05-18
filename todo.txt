@@ -1,0 +1,18 @@
+Implementation
+    1 - (5) Add additional resource types (Volume, StatefulSet, DaemonSet and so on)
+    2 - (6) Delete additional resource types (Deployment, ReplicaSet, Service, ConfigMap)
+    3 - (1) Interface to query the graph (GraphSubscriber)
+        3.1 - RestfulAPI (Flask)
+        3.2 - (1) Database connection via Neo4j Python driver and Cypher
+        3.3 - Pub/Sub interface
+    4 - (7) Add support for Modified event type
+    5 - (3) Write docker files for KubeGrapher, KubeInsights
+    6 - (4) Write manifest file for all three
+    7 - (2) Release the source code (April 4)
+
+Design
+    1 - Add hypervisor support to the graph
+    2 - Identify cloud offering that we want to cover (so far its something like aws EKS)
+    3 - Adding monitization with Smart Contracts and strengthening the DLT case with proof of computation and so on
+
+    
