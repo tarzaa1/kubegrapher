@@ -35,7 +35,7 @@ def create_account(client):
 
 def subscribe(client, topicID, processMessage):
     topicId = TopicId.fromString(topicID)
-    print("TopicID: ",  topicId.toString())
+    print("Subscribed to TopicID: ",  topicId.toString())
     time.sleep(2)
 
     # please see https://github.com/wensheng/hcs-grpc-api-py-client for using grpc client

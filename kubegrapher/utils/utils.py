@@ -32,18 +32,20 @@ def merge_node(type, properties=None, **kwargs):
     """
     return query
 
-def delete_node(type, id=None, **kwargs):
-    if id is not None:
-        query = f"""
-        MATCH (node:{type} {{id: node_id}})
-        DETACH DELETE node
-        """
-    else:
-        placeholders = _placeholders(kwargs=kwargs)
-        query = f"""
-        MATCH (node:{type} {{{placeholders}}})
-        DETACH DELETE node
-        """
+def delete_node_query(type, **kwargs):
+    placeholders = _placeholders(kwargs=kwargs)
+    query = f"""
+    MATCH (node:{type} {{{placeholders}}})
+    DETACH DELETE node
+    """
+    return query
+
+def delete_pod_query(**kwargs):
+    placeholders = _placeholders(kwargs=kwargs)
+    query = f"""
+    MATCH (pod:{'Pod'} {{{placeholders}}})--(containers:{'Container'})
+    DETACH DELETE containers, pod
+    """
     return query
 
 
