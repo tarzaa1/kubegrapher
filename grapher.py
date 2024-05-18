@@ -1,62 +1,183 @@
 from kubegrapher.utils.graph.neo4j import Neo4j
-from kubegrapher.model import Image, Container, Label, Taint, Annotation, Pod, Deployment, ReplicaSet, K8sNode, ConfigMap, Service
-from kubegrapher.utils.utils import delete_node as delete
+from kubegrapher.model import Node
+from kubegrapher.utils.utils import delete_node_query, delete_pod_query
+import json
 
 
 class Grapher(object):
     def __init__(self, graphdb: Neo4j) -> None:
         self.db = graphdb
 
-    def add_cluster(self) -> None:
-        pass
+    def merge(self, resource: Node):
+        self.db.execute_write(resource.merge)
 
-    def add_k8snode(self, tx, k8snode: K8sNode):
-        k8snode.merge(tx)
-        # link node to cluster
+    def link(self, resource: Node, target: Node, type: str):
+        def show_result(tx, resource, target, type):
+            result = resource.link(tx, type, target)
+            print(result)
+        self.db.execute_write(show_result, resource, target, type)
 
-    def add_deployment(self, tx, deployment: Deployment):
-        deployment.merge(tx)
+    def deletePod(self, name):
+        self.db.execute_write(self.delete_pod, name=name)
 
-    def add_replicaset(self, tx, replicaset: ReplicaSet):
-        replicaset.merge(tx)
+    def deleteNode(self, name):
+        self.db.execute_write(self.delete_k8snode, name=name)
 
-    def add_pod(self, tx, pod: Pod):
-        pod.merge(tx)
+    def get_counts(self):
+        self.db.execute_read(self.stats)
 
-    def add_container(self, tx, container: Container):
-        container.merge(tx)
-    
-    def add_service(self, tx, service: Service):
-        service.merge(tx)
+    def get_subgraph(self):
+        self.db.execute_read(self.subgraph)
 
-    def add_configmap(self, tx, configmap: ConfigMap):
-        configmap.merge(tx)
+    def clear(self):
+        self.db.delete_all()
 
-    def add_label(self, tx, label: Label):
-        label.merge(tx)
-
-    def add_annotation(self, tx, annotation: Annotation):
-        annotation.merge(tx)
-    
-    def add_taint(self, tx, taint: Taint):
-        taint.merge(tx)
-
-    def add_image(self, tx, image: Image):
-        image.merge(tx)
-
-    def delete_pod(self, tx, id=None, **kwargs):
-        self.delete_node(tx, type='Pod,' id=id, **kwargs)
-    
-    def delete_node(self, tx, type, id=None, **kwargs):
-        query = delete(type=type, id=id, **kwargs)
+    def delete_pod(self, tx, **kwargs):
+        query = delete_pod_query(**kwargs)
         print('\n' + query + '\n')
-        result = tx.run(query, id=id, **kwargs)
-        print(result.consume().counters.nodes_deleted)
+        result = tx.run(query, **kwargs)
+        summary = result.consume()
+        relationships_deleted = summary.counters.relationships_deleted
+        labels_deleted = self.delete_orphans(tx, "Label")
+        annots_deleted = self.delete_orphans(tx, "Annotation")
+        nodes_deleted = summary.counters.nodes_deleted + labels_deleted + annots_deleted
+        print(f"\nDeleted {nodes_deleted} graph nodes and {relationships_deleted} relationships")
 
+    def delete_k8snode(self, tx, **kwargs):
+        summary = self.delete_node(tx, "K8sNode", **kwargs)
+        relationships_deleted = summary.counters.relationships_deleted
+        labels_deleted = self.delete_orphans(tx, "Label")
+        annotations_deleted = self.delete_orphans(tx, "Annotation")
+        taints_deleted = self.delete_orphans(tx, "Taint")
+        images_deleted = self.delete_orphans(tx, "Image")
+        nodes_deleted = summary.counters.nodes_deleted + labels_deleted + annotations_deleted + taints_deleted + images_deleted
+        print(f"\nDeleted {nodes_deleted} graph nodes and {relationships_deleted} relationships")
+
+    def delete_node(self, tx, type, **kwargs):
+        query = delete_node_query(type, **kwargs)
+        print('\n' + query + '\n')
+        result = tx.run(query, **kwargs)
+        return result.consume()
+
+    def delete_orphans(self, tx, type):
+        query = f"""
+            MATCH (n:{type})
+            WHERE (NOT (n)--())
+            DELETE (n)
+            """
+        result = tx.run(query)
+        summary = result.consume()
+        return summary.counters.nodes_deleted
+
+    def count(self, tx, type):
+        query = f"""
+            MATCH (nodes:{type})
+            RETURN count(nodes)
+            """
+        result = tx.run(query)
+        print(f"{type}s: {result.single().data()['count(nodes)']}")
+    
+    def stats(self, tx):
+        print('\n')
+        self.count(tx, 'K8sNode')
+        self.count(tx, 'Pod')
+        self.count(tx, 'Deployment')
+        self.count(tx, 'ReplicaSet')
+        self.count(tx, 'Label')
+        self.count(tx, 'Annotation')
+        self.count(tx, 'Image')
+        self.count(tx, 'Container')
+        self.count(tx, 'Taint')
+        self.count(tx, 'Service')
+        self.count(tx, 'ConfigMap')
+
+    def subgraph(self, tx):
+
+        nodes = []
+        edges = []
+        ids = []
+
+        result = self.get_nodes(tx, 'K8sNode')
+        for record in result:
+            node = record['node']
+            if node.element_id not in ids:
+                nodes.append({'id': node.element_id, 'name': node['name'], 'type': 'K8sNode'})
+                ids.append(node.element_id)
+
+        result = self.get_nodes(tx, 'Pod')
+        for record in result:
+            node = record['node']
+            if node.element_id not in ids:
+                nodes.append({'id': node.element_id, 'name': node['name'], 'type': 'Pod'})
+                ids.append(node.element_id)
+
+        result = self.get_nodes(tx, 'Container')
+        for record in result:
+            node = record['node']
+            if node.element_id not in ids:
+                nodes.append({'id': node.element_id, 'name': node['name'], 'type': 'Container'})
+                ids.append(node.element_id)
+
+        result = self.get_images(tx)
+        for record in result:
+            node = record['node']
+            if node.element_id not in ids:
+                nodes.append({'id': node.element_id, 'name': node['name'], 'type': 'Image'})
+                ids.append(node.element_id)
+            r = record['r']
+            if r.element_id not in ids:
+                edges.append({'id': r.element_id, 'start': r.start_node.element_id, 'end':r.end_node.element_id, 'label': r.type})
+                ids.append(r.element_id)
+        
+        result = self.get_edges(tx, "K8sNode", "Pod")
+        for record in result:
+            r = record['r']
+            if r.element_id not in ids:
+                edges.append({'id': r.element_id, 'start': r.start_node.element_id, 'end':r.end_node.element_id, 'label': r.type})
+                ids.append(r.element_id)
+
+        result = self.get_edges(tx, "Container", "Pod")
+        for record in result:
+            r = record['r']
+            if r.element_id not in ids:
+                edges.append({'id': r.element_id, 'start': r.start_node.element_id, 'end':r.end_node.element_id, 'label': r.type})
+                ids.append(r.element_id)
+
+        result = self.get_edges(tx, "Container", "Image")
+        for record in result:
+            r = record['r']
+            if r.element_id not in ids:
+                edges.append({'id': r.element_id, 'start': r.start_node.element_id, 'end':r.end_node.element_id, 'label': r.type})
+                ids.append(r.element_id)
+
+        subgraph = {'nodes': nodes, 'edges': edges}
+        with open('/home/ubuntu/dev/app/graphviz/subgraph.json', 'w') as fp:
+            json.dump(subgraph, fp, indent=4)
+    
+    def get_nodes(self, tx, type):
+        query = f"""
+            MATCH (node:{type})
+            RETURN node
+            """
+        return tx.run(query)
+    
+    def get_images(self, tx):
+        query = f"""
+            MATCH (node:Image)--(:Container)
+            MATCH (node)-[r]-()
+            RETURN node, r
+            """
+        return tx.run(query)
+    
+    def get_edges(self, tx, start, end):
+        query = f"""
+            MATCH (:{start})-[r]-(:{end})
+            RETURN r
+            """
+        return tx.run(query)
 
 if __name__ == '__main__':
 
-    # URI examples: "neo4j://localhost", "neo4j+s://xxx.databases.neo4j.io"
     URI = "bolt://localhost:7687"
     AUTH = ("neo4j", "password")
 
@@ -64,59 +185,56 @@ if __name__ == '__main__':
 
     grapher = Grapher(graphdb)
 
-    type = 'K8sNode'
-    properties = {
-        'name': 'hasib',
-        'architecture': 'amd64',
-        'os': 'linux',
-        'kernel': '5.15.0-87-generic',
-        'memory': 45763298
-    }
-    uid = 'whatever'
+    # grapher.get_subgraph()
 
-    label_1 = Label(key='role', value='control_plane')
-    label_2 = Label(key= 'architecture', value='amd64')
+    # type = 'K8sNode'
+    # properties = {
+    #     'name': 'hasib',
+    #     'architecture': 'amd64',
+    #     'os': 'linux',
+    #     'kernel': '5.15.0-87-generic',
+    #     'memory': 45763298
+    # }
+    # uid = 'whatever'
 
-    labels = [label_1, label_2]
+    # label_1 = Label(key='role', value='control_plane')
+    # label_2 = Label(key= 'architecture', value='amd64')
 
-    annotation = Annotation(key='network', value='vxlan')
-    annotations = [annotation]
+    # labels = [label_1, label_2]
 
-    taint = Taint(key='NoSchedule', effect='node-role.kubernetes.io/control-plane')
-    taints = [taint]
+    # annotation = Annotation(key='network', value='vxlan')
+    # annotations = [annotation]
 
-    image = Image('someimageid', 'registry.k8s.io/etcd:3.5.6-0', 102542580)
-    images = [image]
+    # taint = Taint(key='NoSchedule', effect='node-role.kubernetes.io/control-plane')
+    # taints = [taint]
 
-    k8snode = K8sNode(uid, properties, labels, annotations, taints, images)
-    deployment = Deployment('some_uid')
-    replicaset = ReplicaSet('some_other_uid', 'some_uid')
-    configmap = ConfigMap('config_uid', {'name': 'my_configmap'})
+    # image = Image('registry.k8s.io/etcd:3.5.6-0', 102542580)
+    # images = [image]
 
-    container = Container('someimageid', properties, 'my_configmap')
+    # k8snode = K8sNode(uid, properties, labels, annotations, taints, images)
+    # deployment = Deployment('some_uid')
+    # replicaset = ReplicaSet('some_other_uid', 'some_uid')
+    # configmap = ConfigMap('config_uid', {'name': 'my_configmap'})
 
-    session = graphdb.driver.session()
-    session.execute_write(grapher.add_k8snode, k8snode)
-    session.execute_write(grapher.add_deployment, deployment)
-    session.execute_write(grapher.add_replicaset, replicaset)
-    session.execute_write(grapher.add_configmap, configmap)
-    session.execute_write(grapher.add_container, container)
-    # session.execute_write(grapher.delete_node, type='ConfigMap', name='my_configmap')
+    # container = Container('registry.k8s.io/etcd:3.5.6-0', properties, 'my_configmap')
+    # container1 = Container('registry.k8s.io/etcd:3.5.6-0', properties, 'my_configmap')
 
-    session.close()
+    # pod_label_1 = Label(key='app', value='myapp')
+    # pod_label_2 = Label(key= 'lang', value='python3')
 
-    # (records, summary, keys) = graphdb.add_node(type)
+    # pod_labels = [pod_label_1, pod_label_2]
 
-    # for record in records:
-    #     print(record.data())
+    # pod_annotation = Annotation(key='service', value='micro')
+    # pod_annotations = [pod_annotation]
 
-    # print("Created {nodes_created} nodes in {time} ms.".format(
-    #     nodes_created=summary.counters.nodes_created,
-    #     time=summary.result_available_after
-    # ))
+    # pod = Pod(uid='pod_uid', k8snode_name='hasib', labels=pod_labels, annotations=pod_annotations, containers=[container, container1], replicaset_uid='some_other_uid')
 
-    # records = graphdb.match_node(type, None)
-    # for record in records:
-    #     print(record.data())
+    # grapher.merge(k8snode)
+    # grapher.merge(deployment)
+    # grapher.merge(replicaset)
+    # grapher.merge(configmap)
+    # grapher.merge(container)
+    # grapher.merge(pod)
+    # grapher.get_subgraph()
 
     graphdb.delete_all()
