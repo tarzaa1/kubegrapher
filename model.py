@@ -57,51 +57,55 @@ class Node():
     
 
 class Image(Node):
-    def __init__(self, imageID: str, name: str, sizeInBytes: int) -> None:
-        super().__init__(type=self.__class__.__name__, uid=imageID, name=name, sizeInBytes=sizeInBytes)
+    def __init__(self, name: str, sizeInBytes: int) -> None:
+        self.id = name + str(sizeInBytes)
+        super().__init__(type=self.__class__.__name__, uid=self.id, name=name, sizeInBytes=sizeInBytes)
 
     def merge(self, tx: callable):
         print(super().merge(tx))
         
 
 class Container(Node):
-    def __init__(self, image_id: str, properties: dict[str: any], configmap_name: str = None) -> None:
+    def __init__(self, image_name: str, properties: dict[str: any], configmap_name: str = None) -> None:
         super().__init__(type=self.__class__.__name__, properties=properties)
 
-        self.imageID = image_id
+        self.imageName = image_name
         self.configMapName = configmap_name
     
     def merge(self, tx: callable):
         print(super().merge(tx))
-        result = self.link(tx, type='INSTANTIATES_IMAGE', target=Node(type='Image', uid=self.imageID))
+        result = self.link_generic(tx, type='INSTANTIATES_IMAGE', target=Node(type='Image', name=self.imageName))
         print(result)
         if self.configMapName is not None:
             result = self.link_generic(tx, type='CONFIGMAP_REF', target=Node(type='ConfigMap', name=self.configMapName))
             print(result)
 
     def __str__(self):
-        cont = f"{super().__str__()}, Image: {self.imageID}"
+        cont = f"{super().__str__()}, Image: {self.imageName}"
         if self.configMapName is not None:
             cont = f"{cont}, ConfigMap: {self.configMapName}"
         return cont
     
 class Label(Node):
     def __init__(self, key: str, value: str) -> None:
-        super().__init__(type=self.__class__.__name__, key=key, value=value)
+        self.id = key + value
+        super().__init__(type=self.__class__.__name__, uid=self.id, key=key, value=value)
     
     def merge(self, tx: callable):
         print(super().merge(tx))
 
 class Annotation(Node):
     def __init__(self, key: str, value: str) -> None:
-        super().__init__(type=self.__class__.__name__, key=key, value=value)
+        self.id = key + value
+        super().__init__(type=self.__class__.__name__, uid=self.id, key=key, value=value)
     
     def merge(self, tx: callable):
         print(super().merge(tx))
 
 class Taint(Node):
-    def __init__(self, key: str, effect: str) -> None:
-        super().__init__(type=self.__class__.__name__, key=key, effect=effect)
+    def __init__(self, key: str = None, effect: str = None, **kwargs) -> None:
+        self.id = key + effect
+        super().__init__(type=self.__class__.__name__, uid=self.id, key=key, effect=effect)
     
     def merge(self, tx: callable):
         print(super().merge(tx))
