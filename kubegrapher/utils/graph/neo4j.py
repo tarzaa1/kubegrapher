@@ -3,7 +3,7 @@ from neo4j import GraphDatabase
 
 
 class Neo4j(GraphDB):
-    def __init__(self, URI="bolt://localhost:7687", AUTH=("neo4j", "password")) -> None:
+    def __init__(self, URI, AUTH) -> None:
         self.driver = self.create_connection(URI, AUTH)
         self.driver.verify_connectivity()
 
