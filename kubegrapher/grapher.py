@@ -3,7 +3,6 @@ from kubegrapher.model import Node
 from kubegrapher.utils.utils import delete_node_query, delete_pod_query
 import json
 
-
 class Grapher(object):
     def __init__(self, graphdb: Neo4j) -> None:
         self.db = graphdb
@@ -180,9 +179,8 @@ if __name__ == '__main__':
 
     URI = "bolt://localhost:7687"
     AUTH = ("neo4j", "password")
-
+    
     graphdb = Neo4j(URI, AUTH)
-
     grapher = Grapher(graphdb)
 
     # grapher.get_subgraph()
