@@ -1,274 +1,252 @@
-from kubegrapher.model import Label, Annotation, Taint, Image, K8sNode, ConfigMap, Service, Deployment, ReplicaSet, Container, Pod
+from kubegrapher.model import (
+    Label, 
+    Annotation, 
+    Taint, 
+    Image, 
+    K8sNode, 
+    ConfigMap, 
+    Service, 
+    Deployment, 
+    ReplicaSet, 
+    Container, 
+    Pod
+)
+import logging
 import json
 
-def parseK8sNode(k8snode: dict[str: any]):
+logging.basicConfig(level=logging.INFO)
 
-    metadata = k8snode['metadata']
-    spec = k8snode['spec']
-    status = k8snode['status']
+def parse_k8s_node(k8snode: dict[str: any]) -> K8sNode:
+    try:
+        metadata = k8snode.get('metadata', {})
+        spec = k8snode.get('spec', {})
+        status = k8snode.get('status', {})
 
-    uid = metadata['uid']
+        uid = metadata.get('uid')
+        if not uid:
+            raise ValueError("UID is missing in the node metadata")
+        
+        properties = {
+            'name': metadata.get('name', ''),
+            'creationTimestamp': metadata.get('creationTimestamp', ''),
+            **status.get('nodeInfo', {}),
+            # **status.get('allocatable', {})
+        }
 
-    properties = {}
-    properties['name'] = metadata['name']
-    properties['creationTimestamp'] = metadata['creationTimestamp']
-    properties.update(status['nodeInfo'])
-    # properties.update(status['allocatable'])
-    properties['internalIP'] = status['addresses'][0]['address']
-    properties['hostname'] = status['addresses'][1]['address']
+        addresses = status.get('addresses', [])
+        if addresses:
+            properties['internalIP'] = addresses[0].get('address', '')
+            if len(addresses) > 1:
+                properties['hostname'] = addresses[1].get('address', '')
 
-    # pprint(properties)
+        labels = [Label(key, value) for key, value in metadata.get('labels', {}).items()]
+        annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
+        taints = [Taint(**taint) for taint in spec.get('taints', [])]
+        images = [Image(image['names'][-1], image['sizeBytes']) for image in status.get('images', []) if isinstance(image['names'], list)]
 
-    if 'labels' in metadata.keys():
-        labels = [Label(key, value) for key, value in metadata['labels'].items()]
-    else:
-        labels = []
-    if 'annotations' in metadata.keys():
-        annotations = [Annotation(key, value) for key, value in metadata['annotations'].items()]
-    else:
-        annotations = []
-    if 'taints' in spec.keys():
-        taints = [Taint(**taint) for taint in spec['taints']]
-    else:
-        taints = []
+        return K8sNode(uid, properties, labels, annotations, taints, images)
+    except Exception as e:
+        logging.error(f"Error parsing K8sNode: {e}")
+        return None
 
-    images = []
-    for image in status['images']:
-        if isinstance(image['names'], list):
-            images.append(Image(image['names'][-1], image['sizeBytes']))
+def parse_configmap(configmap: dict[str, any]) -> ConfigMap:
+    try:
+        metadata = configmap.get('metadata', {})
+        data = configmap.get('data', {})
 
-    k8snode = K8sNode(uid, properties, labels, annotations, taints, images)
+        uid = metadata.get('uid')
+        if not uid:
+            raise ValueError("UID is missing in the configmap metadata")
 
-    return k8snode
+        properties = {
+            'name': metadata.get('name', ''),
+            'creationTimestamp': metadata.get('creationTimestamp', ''),
+            'data': json.dumps(data)
+        }
 
-def parseConfigMap(configmap: dict[str: any]):
+        labels = [Label(key, value) for key, value in metadata.get('labels', {}).items()]
+        annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
 
-    metadata = configmap['metadata']
-    data = configmap['data']
-
-    uid = metadata['uid']
-
-    properties = {}
-    properties['name'] = metadata['name']
-    properties['creationTimestamp'] = metadata['creationTimestamp']
-    properties['data'] = json.dumps(data)
-
-    # pprint(properties)
+        return ConfigMap(uid, properties)
+    except Exception as e:
+        logging.error(f"Error parsing ConfigMap: {e}")
+        return None
     
-    if 'labels' in metadata.keys():
-        labels = [Label(key, value) for key, value in metadata['labels'].items()]
-    else:
-        labels = []
-    if 'annotations' in metadata.keys():
-        annotations = [Annotation(key, value) for key, value in metadata['annotations'].items()]
-    else:
-        annotations = []
+def parse_deployment(deployment: dict[str, any]) -> Deployment:
+    try:
+        metadata = deployment.get('metadata', {})
+        spec = deployment.get('spec', {})
+        status = deployment.get('status', {})
 
-    configmap = ConfigMap(uid, properties)
+        uid = metadata.get('uid')
+        if not uid:
+            raise ValueError("UID is missing in the deployment metadata")
 
-    return configmap
+        properties = {
+            'name': metadata.get('name', ''),
+            'creationTimestamp': metadata.get('creationTimestamp', ''),
+            'replicas': spec.get('replicas'),
+            'selector': json.dumps(spec.get('selector', {})),
+            'strategy': json.dumps(spec.get('strategy', {})),
+            'revisionHistoryLimit': spec.get('revisionHistoryLimit'),
+            'progressDeadlineSeconds': spec.get('progressDeadlineSeconds'),
+            'observedGeneration': status.get('observedGeneration'),
+            # 'replicas': status.get('replicas'),
+            'updatedReplicas': status.get('updatedReplicas'),
+            'readyReplicas': status.get('readyReplicas'),
+            'availableReplicas': status.get('availableReplicas')
+        }
 
-def parseDeployment(deployment: dict[str: any]):
+        labels = [Label(key, value) for key, value in metadata.get('labels', {}).items()]
+        annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
 
-    metadata = deployment['metadata']
-    spec = deployment['spec']
-    status = deployment['status']
+        return Deployment(uid, properties, labels, annotations)
+    except Exception as e:
+        logging.error(f"Error parsing Deployment: {e}")
+        return None
 
-    uid = metadata['uid']
+def parse_replicaset(replicaset: dict[str, any]) -> ReplicaSet:
+    try:
+        metadata = replicaset.get('metadata', {})
+        spec = replicaset.get('spec', {})
+        status = replicaset.get('status', {})
 
-    properties = {}
-    properties['name'] = metadata['name']
-    properties['creationTimestamp'] = metadata['creationTimestamp']
+        uid = metadata.get('uid')
+        if not uid:
+            raise ValueError("UID is missing in the replicaset metadata")
+
+        deploymentUID = metadata.get('ownerReferences', [{}])[0].get('uid')
+        if not deploymentUID:
+            raise ValueError("Deployment UID is missing in the replicaset ownerReferences")
+
+        properties = {
+            'name': metadata.get('name', ''),
+            'creationTimestamp': metadata.get('creationTimestamp', ''),
+            'replicas': spec.get('replicas'),
+            'selector': json.dumps(spec.get('selector', {})),
+            'observedGeneration': status.get('observedGeneration'),
+            # 'replicas': status.get('replicas'),
+            'fullyLabeledReplicas': status.get('fullyLabeledReplicas'),
+            'readyReplicas': status.get('readyReplicas'),
+            'availableReplicas': status.get('availableReplicas')
+        }
+
+        labels = [Label(key, value) for key, value in metadata.get('labels', {}).items()]
+        annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
+
+        return ReplicaSet(uid, deploymentUID, properties, labels, annotations)
+    except Exception as e:
+        logging.error(f"Error parsing ReplicaSet: {e}")
+        return None
     
-    properties['replicas'] = spec['replicas']
-    properties['selector'] = json.dumps(spec['selector'])
-    properties['strategy'] = json.dumps(spec['strategy'])
-    properties['revisionHistoryLimit'] = spec['revisionHistoryLimit']
-    properties['progressDeadlineSeconds'] = spec['progressDeadlineSeconds']
+def parse_pod(pod: dict[str, any]) -> Pod:
+    try:
+        metadata = pod.get('metadata', {})
+        spec = pod.get('spec', {})
+        status = pod.get('status', {})
 
-    properties['observedGeneration'] = status['observedGeneration']
-    # replicas = status['replicas']
-    properties['updatedReplicas'] = status['updatedReplicas']
-    properties['readyReplicas'] = status['readyReplicas']
-    properties['availableReplicas'] = status['availableReplicas']
+        uid = metadata.get('uid')
+        if not uid:
+            raise ValueError("UID is missing in the pod metadata")
 
-    # pprint(properties)
+        properties = {
+            'name': metadata.get('name', ''),
+            'creationTimestamp': metadata.get('creationTimestamp', ''),
+            'restartPolicy': spec.get('restartPolicy', ''),
+            'terminationGracePeriodSeconds': spec.get('terminationGracePeriodSeconds', ''),
+            'dnsPolicy': spec.get('dnsPolicy', ''),
+            'serviceAccountName': spec.get('serviceAccountName', ''),
+            'serviceAccount': spec.get('serviceAccount', ''),
+            # 'securityContext': spec.get('securityContext', ''),
+            'schedulerName': spec.get('schedulerName', ''),
+            'priority': spec.get('priority', ''),
+            'enableServiceLinks': spec.get('enableServiceLinks', ''),
+            'preemptionPolicy': spec.get('preemptionPolicy', ''),
+            'phase': status.get('phase', ''),
+            'hostIP': status.get('hostIP', ''),
+            'podIP': status.get('podIP', ''),
+            'startTime': status.get('startTime', ''),
+            'qosClass': status.get('qosClass', '')
+        }
 
-    if 'labels' in metadata.keys():
-        labels = [Label(key, value) for key, value in metadata['labels'].items()]
-    else:
-        labels = []
-    if 'annotations' in metadata.keys():
-        annotations = [Annotation(key, value) for key, value in metadata['annotations'].items()]
-    else:
-        annotations = []
+        nodeName = spec.get('nodeName', '')
+        # tolerations = spec.get('tolerations', [])
+        containerStatuses = {containerStatus['name']: containerStatus for containerStatus in status.get('containerStatuses', [])}
+        containers = [parse_container(container, containerStatuses.get(container['name'], {})) for container in spec.get('containers', [])]
 
-    deployment = Deployment(uid, properties, labels, annotations)
+        replicasetUID = metadata.get('ownerReferences', [{}])[0].get('uid', None)
 
-    return deployment
+        labels = [Label(key, value) for key, value in metadata.get('labels', {}).items()]
+        annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
 
-def parseReplicaSet(replicaset: dict[str: any]):
+        return Pod(uid, nodeName, properties, labels, annotations, containers, replicasetUID)
+    except Exception as e:
+        logging.error(f"Error parsing Pod: {e}")
+        return None
 
-    metadata = replicaset['metadata']
-    spec = replicaset['spec']
-    status = replicaset['status']
+def parse_container(container: dict[str, any], containerStatus: dict[str, any]) -> Container:
+    try:
+        properties = {
+            'name': container.get('name', ''),
+            'image': container.get('image', ''),
+            'imagePullPolicy': container.get('imagePullPolicy', ''),
+            'terminationMessagePath': container.get('terminationMessagePath', ''),
+            'terminationMessagePolicy': container.get('terminationMessagePolicy', ''),
+        }
 
-    uid = metadata['uid']
+        container_id = containerStatus.get('containerID', '')
+        image_name = containerStatus.get('image', '')
 
-    properties = {}
-    properties['name'] = metadata['name']
-    properties['creationTimestamp'] = metadata['creationTimestamp']
-    deploymentUID = metadata['ownerReferences'][0]['uid']
-    
-    properties['replicas'] = spec['replicas']
-    properties['selector'] = json.dumps(spec['selector'])
-
-    properties['observedGeneration'] = status['observedGeneration']
-    # replicas = status['replicas']
-    properties['fullyLabeledReplicas'] = status['fullyLabeledReplicas']
-    properties['readyReplicas'] = status['readyReplicas']
-    properties['availableReplicas'] = status['availableReplicas']
-
-    # pprint(properties)
-
-    if 'labels' in metadata.keys():
-        labels = [Label(key, value) for key, value in metadata['labels'].items()]
-    else:
-        labels = []
-    if 'annotations' in metadata.keys():
-        annotations = [Annotation(key, value) for key, value in metadata['annotations'].items()]
-    else:
-        annotations = []
-
-    replicaset = ReplicaSet(uid, deploymentUID, properties, labels, annotations)
-
-    return replicaset
-
-def parsePod(pod: dict[str: any]):
-
-    metadata = pod['metadata']
-    spec = pod['spec']
-    status = pod['status']
-
-    uid = metadata['uid']
-
-    properties = {}
-    properties['name'] = metadata['name']
-    properties['creationTimestamp'] = metadata['creationTimestamp']
-    
-    containers = spec['containers']
-    properties['restartPolicy'] = spec['restartPolicy'] 
-    properties['terminationGracePeriodSeconds'] = spec['terminationGracePeriodSeconds'] 
-    properties['dnsPolicy'] = spec['dnsPolicy']
-    properties['serviceAccountName'] = spec['serviceAccountName']
-    properties['serviceAccount'] = spec['serviceAccount']
-    nodeName = spec['nodeName']
-    securityContext = spec['securityContext'] 
-    properties['schedulerName'] = spec['schedulerName']
-    tolerations = spec['tolerations']
-    properties['priority'] = spec['priority']
-    properties['enableServiceLinks'] = spec['enableServiceLinks'] 
-    properties['preemptionPolicy'] = spec['preemptionPolicy']
-
-    properties['phase'] = status['phase']
-    properties['hostIP'] = status['hostIP']
-    if 'podIP' in status:
-        properties['podIP'] = status['podIP']
-    # podIPs = status['podIPs']
-    properties['startTime'] = status['startTime']
-    containerStatuses = status['containerStatuses']
-    properties['qosClass'] = status['qosClass']
-
-    # pprint(properties)
-
-    if 'ownerReferences' in metadata.keys():
-        replicasetUID = metadata['ownerReferences'][0]['uid']
-    else:
-        replicasetUID = None
-    if 'labels' in metadata.keys():
-        labels = [Label(key, value) for key, value in metadata['labels'].items()]
-    else:
-        labels = []
-    if 'annotations' in metadata.keys():
-        annotations = [Annotation(key, value) for key, value in metadata['annotations'].items()]
-    else:
-        annotations = []
-
-    containerStatuses = {containerStatus['name']: containerStatus for containerStatus in containerStatuses}
-
-    containers = [parseContainer(container, containerStatuses[container['name']]) for container in containers]
-
-    pod = Pod(uid, nodeName, properties, labels, annotations, containers, replicasetUID)
-
-    return pod
-
-def parseContainer(container: dict[str: any], containerStatus: dict[str: any]):
-    
-    properties = {}
-    properties['name'] = container['name']
-    properties['image'] = container['image']
-    properties['terminationMessagePath'] = container['terminationMessagePath']
-    properties['terminationMessagePolicy'] = container['terminationMessagePolicy']
-    properties['imagePullPolicy'] = container['imagePullPolicy']
-
-    # pprint(properties)
-
-    imageName = containerStatus['image']
-
-    if 'envFrom' in container.keys():
-        configmap_name = container['envFrom'][0]['configMapRef']['name']
-    else:
         configmap_name = None
+        if 'envFrom' in container.keys() and 'configMapRef' in container['envFrom'][0]:
+            configmap_name = container['envFrom'][0]['configMapRef'].get('name', None)
 
-    container = Container(imageName, properties, configmap_name)
+        return Container(container_id, image_name, properties, configmap_name)
+    except Exception as e:
+        logging.error(f"Error parsing Container: {e}")
+        return None
 
-    return container
+def parse_image(image: dict[str, any]) -> Image:
+    try:
+        names = image.get('names', [])
+        sizeBytes = image.get('sizeBytes', 0)
 
-def parseImage(image: dict[str: any]):
-    names = image['names']
-    sizeBytes = image['sizeBytes']
-
-    return Image(names[-1], sizeBytes)
-
-def parseService(service: dict[str: any]):
-
-    metadata = service['metadata']
-    spec = service['spec']
-    status = service['status']
-
-    uid = metadata['uid']
-
-    properties = {}
+        return Image(names[-1], sizeBytes)
+    except Exception as e:
+        logging.error(f"Error parsing Image: {e}")
+        return None
     
-    properties['name'] = metadata['name']
-    properties['creationTimestamp'] = metadata['creationTimestamp']
+def parse_service(service: dict[str, any]) -> Service:
+    try:
+        metadata = service.get('metadata', {})
+        spec = service.get('spec', {})
+        status = service.get('status', {})
 
-    properties['ports'] = json.dumps(spec['ports'])
-    if 'selector' in spec.keys():
-        properties['selector'] = json.dumps(spec['selector'])
-    properties['clusterIP'] = spec['clusterIP']
-    clusterIPs = spec['clusterIPs']
-    properties['type'] = spec['type']
-    properties['sessionAffinity'] = spec['sessionAffinity']
-    if 'externalTrafficPolicy' in spec.keys():
-        properties['externalTrafficPolicy'] = spec['externalTrafficPolicy']
-    ipFamilies = spec['ipFamilies']
-    properties['ipFamilyPolicy'] = spec['ipFamilyPolicy']
-    properties['internalTrafficPolicy'] = spec['internalTrafficPolicy']
+        uid = metadata.get('uid')
+        if not uid:
+            raise ValueError("UID is missing in the service metadata")
 
-    loadBalancer = status['loadBalancer']
+        properties = {
+            'name': metadata.get('name', ''),
+            'creationTimestamp': metadata.get('creationTimestamp', ''),
+            'ports': json.dumps(spec.get('ports', [])),
+            'selector': json.dumps(spec.get('selector', {})),
+            'clusterIP': spec.get('clusterIP', ''),
+            'type': spec.get('type', ''),
+            'sessionAffinity': spec.get('sessionAffinity', ''),
+            'externalTrafficPolicy': spec.get('externalTrafficPolicy', ''),
+            'ipFamilyPolicy': spec.get('ipFamilyPolicy', ''),
+            'internalTrafficPolicy': spec.get('internalTrafficPolicy', '')
+        }
 
-    # pprint(properties)
+        clusterIPs = spec.get('clusterIPs')
+        ipFamilies = spec.get('ipFamilies')
+        loadBalancer = status.get('loadBalancer')
 
-    if 'labels' in metadata.keys():
-        labels = [Label(key, value) for key, value in metadata['labels'].items()]
-    else:
-        labels = []
-    if 'annotations' in metadata.keys():
-        annotations = [Annotation(key, value) for key, value in metadata['annotations'].items()]
-    else:
-        annotations = []
+        labels = [Label(key, value) for key, value in metadata.get('labels', {}).items()]
+        annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
 
-    service = Service(uid, properties)
-
-    return service
+        return Service(uid, properties)
+    except Exception as e:
+        logging.error(f"Error parsing Service: {e}")
+        return None
