@@ -1,8 +1,10 @@
-from kubegrapher.utils.graph.neo4j import Neo4j
+from kubegrapher.utils.graph import Neo4j
 from kubegrapher.utils.source import Hedera, Kafka
 from kubegrapher.grapher import Grapher
 from kubegrapher.model import K8sNode
 import kubegrapher.parser as parser
+
+import os, sys
 
 from datetime import datetime
 import csv
@@ -43,25 +45,25 @@ def write_to_db(grapher: Grapher, message):
     body = message['body']
     if action == 'Add':
         if kind == 'Node':
-            k8snode = parser.parseK8sNode(body)
+            k8snode = parser.parse_k8s_node(body)
             grapher.merge(k8snode)
         elif kind == 'ConfigMap':
-            configmap = parser.parseConfigMap(body)
+            configmap = parser.parse_configmap(body)
             grapher.merge(configmap)
         elif kind == 'Pod':
-            pod = parser.parsePod(body)
+            pod = parser.parse_pod(body)
             grapher.merge(pod)
         elif kind == 'Service':
-            service = parser.parseService(body)
+            service = parser.parse_service(body)
             grapher.merge(service)
         elif kind == 'Deployment':
-            deployment = parser.parseDeployment(body)
+            deployment = parser.parse_deployment(body)
             grapher.merge(deployment)
         elif kind == 'ReplicaSet':
-            replicaset = parser.parseReplicaSet(body)
+            replicaset = parser.parse_replicaset(body)
             grapher.merge(replicaset)
         elif kind == 'Image':
-            image = parser.parseImage(body['data'])
+            image = parser.parse_image(body['data'])
             node = K8sNode(body['nodeUID'])
             grapher.merge(image)
             grapher.link(node, image, 'STORES_IMAGE')
@@ -79,14 +81,12 @@ def write_to_db(grapher: Grapher, message):
         elif kind == 'Node':
             grapher.deleteNode(name=body)
     
-    # grapher.get_counts()
-    # grapher.get_subgraph()
+    grapher.get_counts()
+    grapher.get_subgraph()
 
-if __name__ == '__main__':
-
+def main():
     graphdb = Neo4j(URI, AUTH)
     grapher = Grapher(graphdb)
-
     if DATA_SOURCE == "kafka":
         conf = {'bootstrap.servers': KAFKA_BROKER_URL, 
             'group.id': KAFKA_GROUP_ID,
@@ -98,3 +98,13 @@ if __name__ == '__main__':
         conf = "config.json"
         client = Hedera(conf)
         client.subscribe(HEDERA_TOPIC, lambda *args: processMessage(grapher, *args))
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('Interrupted')
+        try:
+            sys.exit(130)
+        except SystemExit:
+            os._exit(130)
