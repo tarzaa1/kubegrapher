@@ -1,6 +1,6 @@
 from kubegrapher.utils.graph.neo4j import Neo4j
 from kubegrapher.model import Node
-from kubegrapher.utils.utils import delete_node_query, delete_pod_query
+from kubegrapher.cypher import delete_node_query, delete_pod_query
 import json
 
 class Grapher(object):
