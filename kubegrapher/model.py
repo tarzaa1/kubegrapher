@@ -1,4 +1,4 @@
-from kubegrapher.utils.utils import merge_node, merge_relationship, to_properties, merge_relationship_generic
+from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic
 import uuid
 
 def toString(properties=None, kwargs=None):
@@ -58,16 +58,16 @@ class Node():
 
 class Image(Node):
     def __init__(self, name: str, sizeInBytes: int) -> None:
-        self.id = name + str(sizeInBytes)
-        super().__init__(type=self.__class__.__name__, uid=self.id, name=name, sizeInBytes=sizeInBytes)
+        uid = name + str(sizeInBytes)
+        super().__init__(type=self.__class__.__name__, uid=uid, name=name, sizeInBytes=sizeInBytes)
 
     def merge(self, tx: callable):
         print(super().merge(tx))
         
 
 class Container(Node):
-    def __init__(self, image_name: str, properties: dict[str: any], configmap_name: str = None) -> None:
-        super().__init__(type=self.__class__.__name__, properties=properties)
+    def __init__(self, container_id: str, image_name: str, properties: dict[str: any], configmap_name: str = None) -> None:
+        super().__init__(type=self.__class__.__name__, uid=container_id, properties=properties)
 
         self.imageName = image_name
         self.configMapName = configmap_name
@@ -88,24 +88,24 @@ class Container(Node):
     
 class Label(Node):
     def __init__(self, key: str, value: str) -> None:
-        self.id = key + value
-        super().__init__(type=self.__class__.__name__, uid=self.id, key=key, value=value)
+        uid = key + value
+        super().__init__(type=self.__class__.__name__, uid=uid, key=key, value=value)
     
     def merge(self, tx: callable):
         print(super().merge(tx))
 
 class Annotation(Node):
     def __init__(self, key: str, value: str) -> None:
-        self.id = key + value
-        super().__init__(type=self.__class__.__name__, uid=self.id, key=key, value=value)
+        uid = key + value
+        super().__init__(type=self.__class__.__name__, uid=uid, key=key, value=value)
     
     def merge(self, tx: callable):
         print(super().merge(tx))
 
 class Taint(Node):
-    def __init__(self, key: str = None, effect: str = None, **kwargs) -> None:
-        self.id = key + effect
-        super().__init__(type=self.__class__.__name__, uid=self.id, key=key, effect=effect)
+    def __init__(self, key: str, effect: str, **kwargs) -> None:
+        uid = key + effect
+        super().__init__(type=self.__class__.__name__, uid=uid, key=key, effect=effect)
     
     def merge(self, tx: callable):
         print(super().merge(tx))
