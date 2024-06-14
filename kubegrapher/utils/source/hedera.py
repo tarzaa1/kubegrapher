@@ -25,12 +25,10 @@ class Hedera(Source):
 
     def subscribe(self, topicID, processMessage):
         topicId = TopicId.fromString(topicID)
-        print("Subscribed to TopicID: ",  topicId.toString())
-        time.sleep(2)
-
         # please see https://github.com/wensheng/hcs-grpc-api-py-client for using grpc client
         query = TopicMessageQuery().setTopicId(topicId)
         query.subscribe(self.client, PyConsumer(processMessage))
+        print("Subscribed to TopicID: ",  topicId.toString())
 
         for i in count():
             time.sleep(2.5)
@@ -47,5 +45,5 @@ class Hedera(Source):
                 .setInitialBalance(Hbar(1000))
                 .execute(self.client))
         receipt = resp.getReceipt(self.client)
-        print("account = ",  receipt.accountId.toString())
+        print("Account ID = ",  receipt.accountId.toString())
         return receipt.accountId.toString(), newKey.toString()
