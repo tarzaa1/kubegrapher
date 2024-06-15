@@ -12,7 +12,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./kubegrapher .
-COPY default_config.json .
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
