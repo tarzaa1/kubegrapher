@@ -6,8 +6,8 @@ TIMEZONE = config('TIMEZONE', default='Europe/London')
 
 #Neo4j
 URI = config('URI', default='bolt://localhost:7687')
-auth_string = config('AUTH', default='neo4j:password')
-AUTH = tuple(auth_string.split(':'))
+auth_string = config('AUTH')
+AUTH = tuple(auth_string.split('/'))
 
 #Kafka
 KAFKA_BROKER_URL = config('KAFKA_BROKER_URL', default='localhost:9092,')
