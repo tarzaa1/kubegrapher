@@ -5,15 +5,10 @@ from kubegrapher.model import K8sNode
 import kubegrapher.parser as parser
 
 import os, sys
-
-from datetime import datetime
-import csv
 import json
-import pytz
 
 from kubegrapher.conf import (
     DATA_SOURCE,
-    TIMEZONE,
     KAFKA_BROKER_URL,
     KAFKA_GROUP_ID,
     KAFKA_TOPIC,
@@ -22,24 +17,9 @@ from kubegrapher.conf import (
     AUTH,
 )
 
-timezone = pytz.timezone(TIMEZONE)
-
-timestamps = []
-
 def processMessage(grapher: Grapher, *args):
-
-    received = datetime.now(tz=timezone)
     message = json.loads(args[2])
-    id = message['id']
-    send_timestamp = message['timestamp']
-    consensus_timestamp = args[0]
 
-    write_to_db(grapher, message)
-
-    written_to_db = datetime.now(tz=timezone)
-    timestamps.append((id, send_timestamp, received, written_to_db, consensus_timestamp))
-
-def write_to_db(grapher: Grapher, message):
     action = message['action']
     kind = message['kind']
     body = message['body']
@@ -68,9 +48,6 @@ def write_to_db(grapher: Grapher, message):
             grapher.merge(image)
             grapher.link(node, image, 'STORES_IMAGE')
         elif kind == 'Done':
-            with open('evaluation/results/records.csv', "w", newline='\n') as csvFile:
-                writer = csv.writer(csvFile)
-                writer.writerows(timestamps) 
             grapher.clear()                
         else:
             pass
