@@ -4,4 +4,4 @@ setuptools==59.6.0
 hedera-sdk-py==2.29.0
 neo4j==5.14.1
 # Editable Git install with no remote (kubegrapher==0.1)
--e /home/ubuntu/dev/app/kubegrapher
+-e .
