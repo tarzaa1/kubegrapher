@@ -12,6 +12,7 @@ class Kafka(Source):
     def subscribe(self, topics, grapher, msg_process):
         try:
             self.client.subscribe(topics)
+            print(f"Subscribed to topic {topics}")
 
             while True:
                 msg = self.client.poll(timeout=1.0)
