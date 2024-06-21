@@ -59,7 +59,7 @@ def processMessage(grapher: Grapher, *args):
             grapher.deleteNode(name=body)
     
     grapher.get_counts()
-    grapher.get_subgraph()
+    # grapher.get_subgraph()
 
 def main():
     graphdb = Neo4j(URI, AUTH)
