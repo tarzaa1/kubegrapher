@@ -19,13 +19,14 @@ from kubegrapher.conf import (
 
 def processMessage(grapher: Grapher, *args):
     message = json.loads(args[2])
+    topic_name = args[3]
 
     action = message['action']
     kind = message['kind']
     body = message['body']
     if action == 'Add':
         if kind == 'Node':
-            k8snode = parser.parse_k8s_node(body)
+            k8snode = parser.parse_k8s_node(body, topic_name)
             grapher.merge(k8snode)
         elif kind == 'ConfigMap':
             configmap = parser.parse_configmap(body)
