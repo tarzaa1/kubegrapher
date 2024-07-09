@@ -247,16 +247,22 @@ class Cluster(Node):
         print(super().merge(tx))
 
 class K8sNode(Node):
-    def __init__(self, uid: str, properties: dict[str: any] = {}, labels: list[Label] = {}, annotations: list[Annotation] = {}, taints: list[Taint] = [], images: list[Image] = []) -> None:
+    def __init__(self, uid: str, properties: dict[str: any] = {}, labels: list[Label] = {}, annotations: list[Annotation] = {}, taints: list[Taint] = [],
+                  images: list[Image] = [], cluster: Cluster = None) -> None:
         super().__init__(type=self.__class__.__name__, uid=uid, properties=properties)
 
         self.labels = labels
         self.annotations = annotations
         self.taints = taints
         self.images = images
+        self.cluster = cluster
     
     def merge(self, tx: callable):
         print(super().merge(tx))
+
+        self.cluster.merge(tx)
+        # print("cluster merted")
+        result = self.link(tx, type='BELONGS_TO', target=self.cluster)
 
         for label in self.labels:
             label.merge(tx)
@@ -290,5 +296,6 @@ class K8sNode(Node):
         if len(self.images) > 0:
             representations.append('\n'.join(image.__str__() for image in self.images))
         return '\n'.join(representation for representation in representations)
+
 
 
