@@ -236,6 +236,16 @@ class ReplicaSet(Node):
             representations.append('\n'.join([annotation.__str__() for annotation in self.annotations]))
         return '\n'.join(representation for representation in representations)
 
+class Cluster(Node):
+    """
+    This class stands for clusters in our graph.
+    """
+    def __init__(self, uid: str, properties: dict[str: any] = {}) -> None:
+        super().__init__(type=self.__class__.__name__, uid="", properties=properties)
+
+    def merge(self, tx: callable):
+        print(super().merge(tx))
+
 class K8sNode(Node):
     def __init__(self, uid: str, properties: dict[str: any] = {}, labels: list[Label] = {}, annotations: list[Annotation] = {}, taints: list[Taint] = [], images: list[Image] = []) -> None:
         super().__init__(type=self.__class__.__name__, uid=uid, properties=properties)
