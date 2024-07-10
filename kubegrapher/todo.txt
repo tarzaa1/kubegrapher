@@ -15,4 +15,40 @@ Design
     2 - Identify cloud offering that we want to cover (so far its something like aws EKS)
     3 - Adding monitization with Smart Contracts and strengthening the DLT case with proof of computation and so on
 
+
+What's the problem of using a uuid generated from KubeInsights?
+
+    This uuid followed the lifecycle of the KubeInsights instance, but not the lifecycle of the cluster.
+    If the KubeInsights instance died, and be re-runned, the uuid changed.
+    Although we can add some data-persistence mechanism to keep this consistency, but overall, this 
+    consistency still cannot match the lifecycle of a cluster, because the concept of the lifecycle 
+    of a cluster is somehow unclear, I think.
+
+How to Identify a cluster?
+
+    It is like the Ship of Theseus. 
+    Inside our cluster, a worker node can be added, be removed, and we can even migrate a master node.
+    https://stackoverflow.com/questions/57163698/how-to-move-kubernetes-master-node-from-one-server-to-another
+
+    In the design of kubernetes, it seems that nodes are not aware of which cluster it belongs to, 
+    which brings difficulties for multi-cluster management. 
+    There is a clear illustration of Pod's lifecycle in k8s' documentation, but I cannot find clues of 
+    the 'lifecycle' of a cluster.
+
+    Please refer to this issue:
+    https://github.com/kubernetes/kubernetes/issues/44954
+    And please see the proposed API KEP-2149: ClusterId for ClusterSet identification
+    https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/2149-clusterid#clusterproperty-crd
     
+Suggestions:
+
+    a.  We can overcome this problem by adding ClusterProperty CRD in our kubernetes cluster.
+        Then we can make use of the concept of clusterSet, and use About-API to identify a cluster.
+        https://multicluster.sigs.k8s.io/concepts/about-api/
+
+    b.  Instead we try to maintain the information of a cluster in our Grapher.
+
+    c.  We identify each node's ownership by using labels.
+
+
+

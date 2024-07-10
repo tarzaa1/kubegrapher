@@ -78,6 +78,7 @@ class Grapher(object):
     
     def stats(self, tx):
         print('\n')
+        self.count(tx, 'Cluster')
         self.count(tx, 'K8sNode')
         self.count(tx, 'Pod')
         self.count(tx, 'Deployment')

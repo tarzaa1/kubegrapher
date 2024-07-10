@@ -16,7 +16,7 @@ import json
 
 logging.basicConfig(level=logging.INFO)
 
-def parse_k8s_node(k8snode: dict[str: any]) -> K8sNode:
+def parse_k8s_node(k8snode: dict[str: any], topic_name: str) -> K8sNode:
     try:
         metadata = k8snode.get('metadata', {})
         spec = k8snode.get('spec', {})
@@ -43,8 +43,7 @@ def parse_k8s_node(k8snode: dict[str: any]) -> K8sNode:
         annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
         taints = [Taint(**taint) for taint in spec.get('taints', [])]
         images = [Image(image['names'][-1], image['sizeBytes']) for image in status.get('images', []) if isinstance(image['names'], list)]
-
-        return K8sNode(uid, properties, labels, annotations, taints, images)
+        return K8sNode(uid, properties, labels, annotations, taints, images, topic_name )
     except Exception as e:
         logging.error(f"Error parsing K8sNode: {e}")
         return None
