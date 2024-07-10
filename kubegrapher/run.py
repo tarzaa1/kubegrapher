@@ -1,7 +1,7 @@
 from kubegrapher.utils.graph import Neo4j
 from kubegrapher.utils.source import Hedera, Kafka
 from kubegrapher.grapher import Grapher
-from kubegrapher.model import K8sNode
+from kubegrapher.model import K8sNode, Cluster
 import kubegrapher.parser as parser
 
 import os, sys
@@ -19,13 +19,17 @@ from kubegrapher.conf import (
 
 def processMessage(grapher: Grapher, *args):
     message = json.loads(args[2])
+    topic_name = args[3]
 
     action = message['action']
     kind = message['kind']
     body = message['body']
     if action == 'Add':
-        if kind == 'Node':
-            k8snode = parser.parse_k8s_node(body)
+        if kind == 'Cluster':
+            cluster = Cluster(topic_name)
+            grapher.merge(cluster)
+        elif kind == 'Node':
+            k8snode = parser.parse_k8s_node(body, topic_name)
             grapher.merge(k8snode)
         elif kind == 'ConfigMap':
             configmap = parser.parse_configmap(body)
