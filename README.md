@@ -23,6 +23,7 @@
     cd kubegrapher
     pip install -r requirements.txt
     ```
+3. Install Java and make sure $JAVA_HOME is set
 
 ## Setup
 
