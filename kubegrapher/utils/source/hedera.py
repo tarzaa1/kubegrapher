@@ -9,7 +9,7 @@ from hedera import (
     AccountCreateTransaction,
     TopicId,
     TopicMessageQuery,
-    PyConsumer
+    PyConsumer,
     )
 
 class Hedera(Source):
