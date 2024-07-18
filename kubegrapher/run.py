@@ -19,7 +19,10 @@ from kubegrapher.conf import (
 
 def processMessage(grapher: Grapher, *args):
     message = json.loads(args[2])
-    topic_name = args[3]
+    if len(args) > 3:
+        topic_name = args[3]
+    else:
+        topic_name = "0.0.1003"
 
     action = message['action']
     kind = message['kind']
