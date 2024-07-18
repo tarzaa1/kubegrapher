@@ -29,8 +29,10 @@ def parse_k8s_node(k8snode: dict[str: any], topic_name: str) -> K8sNode:
         properties = {
             'name': metadata.get('name', ''),
             'creationTimestamp': metadata.get('creationTimestamp', ''),
+            'cpu' : status.get('allocatable').get('cpu'),
+            'ephemeral_storage' : status.get('allocatable').get('ephemeral-storage'),
+            'memory' : status.get('allocatable').get('memory'),
             **status.get('nodeInfo', {}),
-            # **status.get('allocatable', {})
         }
 
         addresses = status.get('addresses', [])
