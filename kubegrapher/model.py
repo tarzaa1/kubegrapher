@@ -30,11 +30,22 @@ class Node():
         self.type = type
         self.properties = properties
         self.kwproperties = kwargs
+        self.n4j_id = None
+
+    def has_n4j_id(self) -> bool:
+        return self.n4j_id != None
+        
+    def get_n4j_id(self) -> str:
+        if self.has_n4j_id:
+            return self.n4j_id
+        else:
+            raise ValueError("Attempt to get n4j_id, but n4j_id does not exist")
 
     def merge(self, tx: callable):
         query = merge_node(type=self.type, properties=self.properties, id=self.id, **self.kwproperties)
         print('\n' + query + '\n')
         result = tx.run(query, self.properties, id=self.id, **self.kwproperties)
+        self.n4j_id = result.single()['node'].element_id
         return result.single()
     
     def link(self, tx: callable, type: str, target: 'Node', properties: dict[str: any] = None, directed = True, reverse = False):
