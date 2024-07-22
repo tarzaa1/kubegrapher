@@ -62,6 +62,20 @@ def merge_relationship(type: str, from_type: str, to_type: str, properties: dict
     """
     return query
 
+def merge_relationship_element_id(type: str, from_type: str, to_type: str, from_element_id: str, to_element_id: str, properties: dict[str: any] = None, directed = True, **kwargs):
+    placeholders = _placeholders(properties=properties, kwargs=kwargs)
+    if directed:
+        arrow = '>'
+    else:
+        arrow = ''
+    query = f"""
+    MATCH (n0:{from_type}), (n1:{to_type})
+    WHERE elementId(n0) = "{from_element_id}" AND elementId(n1) = "{to_element_id}"
+    MERGE p = (n0)-[relation:{type} {{{placeholders}}}]-{arrow}(n1)
+    RETURN p
+    """
+    return query
+
 
 def merge_relationship_generic(type: str, from_type: str, to_type: str, to_properties: dict[str: any], properties: dict[str: any] = None, directed = True, **kwargs):
     placeholders = _placeholders(properties=properties, kwargs=kwargs)
