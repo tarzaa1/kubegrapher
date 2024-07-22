@@ -1,4 +1,4 @@
-from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic
+from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic, merge_relationship_element_id
 import uuid
 
 def toString(properties=None, kwargs=None):
@@ -22,7 +22,6 @@ def toString(properties=None, kwargs=None):
 
 class Node():
     def __init__(self, type: str, uid: str = None, properties: dict[str: any] = None, **kwargs) -> None:
-
         if uid is None:
             self.id = str(uuid.uuid4())
         else:
@@ -49,7 +48,14 @@ class Node():
         return result.single()
     
     def link(self, tx: callable, type: str, target: 'Node', properties: dict[str: any] = None, directed = True, reverse = False):
-        query = merge_relationship(type=type, from_type=self.type, to_type=target.type, properties=properties, directed=directed)
+        if (self.has_n4j_id() and target.has_n4j_id()):
+            print("Enter alternative merge method")
+            # alternative query, merge by element id
+            query = merge_relationship_element_id(type=type, from_type=self.type, to_type=target.type, 
+                                                  from_element_id=self.get_n4j_id(), to_element_id=target.get_n4j_id(), 
+                                                  properties=properties, directed=directed)
+        else:
+            query = merge_relationship(type=type, from_type=self.type, to_type=target.type, properties=properties, directed=directed)
         print('\n' + query + '\n')
         result = tx.run(query, from_id=self.id, to_id=target.id)
         return result.single()
