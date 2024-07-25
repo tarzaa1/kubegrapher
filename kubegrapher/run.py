@@ -64,6 +64,10 @@ def processMessage(grapher: Grapher, *args):
             grapher.deletePod(name=body)
         elif kind == 'Node':
             grapher.deleteNode(name=body)
+
+    if action == 'Update':
+        if kind == 'Metrics':
+            print(body)
     
     grapher.get_counts()
     # grapher.get_subgraph()
