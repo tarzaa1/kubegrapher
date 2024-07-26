@@ -68,6 +68,9 @@ def processMessage(grapher: Grapher, *args):
     if action == 'Update':
         if kind == 'Metrics':
             print(body)
+            metrics_lst = parser.parse_metrics(topic_name, body)
+            for metrics in metrics_lst:
+                grapher.set(metrics)
     
     grapher.get_counts()
     # grapher.get_subgraph()
