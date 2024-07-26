@@ -10,6 +10,9 @@ class Grapher(object):
     def merge(self, resource: Node):
         self.db.execute_write(resource.merge)
 
+    def set(self, resource: Node):
+        self.db.execute_write(resource.set)
+
     def link(self, resource: Node, target: Node, type: str):
         def show_result(tx, resource, target, type):
             result = resource.link(tx, type, target)
