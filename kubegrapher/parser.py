@@ -9,7 +9,8 @@ from kubegrapher.model import (
     Deployment, 
     ReplicaSet, 
     Container, 
-    Pod
+    Pod,
+    K8sNodeMetrics
 )
 import logging
 import json
@@ -250,4 +251,18 @@ def parse_service(service: dict[str, any]) -> Service:
         return Service(uid, properties)
     except Exception as e:
         logging.error(f"Error parsing Service: {e}")
+        return None
+    
+def parse_metrics(cluster_id: str, metrics: dict[str, any]) -> K8sNodeMetrics:
+    metrics_lst = []
+    try:
+        for node in metrics["items"]:
+            usage = {}
+            for k, v in node["usage"].items():
+                usage["usage_" + k] = v
+            metrics_lst.append(K8sNodeMetrics(cluster_id, node["metadata"]["name"], usage))
+
+        return metrics_lst
+    except Exception as e:
+        logging.error(f"Error parsing Metrics: {e}")
         return None
