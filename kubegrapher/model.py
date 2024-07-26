@@ -1,4 +1,4 @@
-from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic
+from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic, set_k8snode_metrics
 import uuid
 
 def toString(properties=None, kwargs=None):
@@ -48,6 +48,10 @@ class Node():
         print('\n' + query + '\n')
         result = tx.run(query, from_id=self.id, **to_properties(target.kwproperties))
         return result.single()
+    
+    def set(self, tx: callable):
+        # Currently only Metrics implemented set function. 
+        raise RuntimeError("SET operation unsupported.")
 
     def __str__(self):
         properties_str = toString(self.properties, self.kwproperties)
@@ -295,5 +299,14 @@ class K8sNode(Node):
             representations.append('\n'.join(image.__str__() for image in self.images))
         return '\n'.join(representation for representation in representations)
 
-
-
+class K8sNodeMetrics():
+    def __init__(self, cluser_id: str, hostname: str, metrics: dict[str: any]) -> None:
+        self.metrics = metrics
+        self.hostname = hostname
+        self.cluster_id = cluser_id
+    
+    def set(self, tx: callable):
+        query = set_k8snode_metrics(metrics=self.metrics)
+        print('\n' + query + '\n')
+        result = tx.run(query, self.metrics, hostname=self.hostname, cluster_id=self.cluster_id)
+        return result.single()
