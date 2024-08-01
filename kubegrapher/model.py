@@ -1,4 +1,4 @@
-from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic, set_k8snode_metrics
+from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic
 import uuid
 
 def toString(properties=None, kwargs=None):
@@ -299,14 +299,3 @@ class K8sNode(Node):
             representations.append('\n'.join(image.__str__() for image in self.images))
         return '\n'.join(representation for representation in representations)
 
-class K8sNodeMetrics():
-    def __init__(self, cluser_id: str, hostname: str, metrics: dict[str: any]) -> None:
-        self.metrics = metrics
-        self.hostname = hostname
-        self.cluster_id = cluser_id
-    
-    def set(self, tx: callable):
-        query = set_k8snode_metrics(metrics=self.metrics)
-        print('\n' + query + '\n')
-        result = tx.run(query, self.metrics, hostname=self.hostname, cluster_id=self.cluster_id)
-        return result.single()
