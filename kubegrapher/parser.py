@@ -9,7 +9,9 @@ from kubegrapher.model import (
     Deployment, 
     ReplicaSet, 
     Container, 
-    Pod,
+    Pod
+)
+from kubegrapher.update import (
     K8sNodeMetrics
 )
 import logging

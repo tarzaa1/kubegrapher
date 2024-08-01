@@ -1,5 +1,6 @@
 from kubegrapher.utils.graph.neo4j import Neo4j
 from kubegrapher.model import Node
+from kubegrapher.update import K8sNodeMetrics
 from kubegrapher.cypher import delete_node_query, delete_pod_query
 import json
 
@@ -10,7 +11,7 @@ class Grapher(object):
     def merge(self, resource: Node):
         self.db.execute_write(resource.merge)
 
-    def set(self, resource: Node):
+    def set(self, resource: Node | K8sNodeMetrics):
         self.db.execute_write(resource.set)
 
     def link(self, resource: Node, target: Node, type: str):
