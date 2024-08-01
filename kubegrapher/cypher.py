@@ -81,14 +81,10 @@ def merge_relationship_generic(type: str, from_type: str, to_type: str, to_prope
 def set_k8snode_metrics(metrics: dict[str: any]):
     placeholders = _placeholders(metrics)
     query = f"""
-    MATCH (n:K8sNode {{hostname: $hostname}})
+    MATCH (n:K8sNode {{hostname: $hostname}}) -[BELONGS_TO]-> (c:Cluster)
+    WHERE c.id = $cluster_id
     SET n += {{{placeholders}}}
     RETURN n
     """
-    # query = f"""
-    # MATCH (n:K8sNode {{hostname: $hostname}})
-    # SET n += {{test: 28}}
-    # RETURN n
-    # """
     return query
     # https://neo4j.com/docs/cypher-manual/current/clauses/set/#set-setting-properties-using-map
