@@ -294,6 +294,3 @@ class K8sNode(Node):
         if len(self.images) > 0:
             representations.append('\n'.join(image.__str__() for image in self.images))
         return '\n'.join(representation for representation in representations)
-
-
-
