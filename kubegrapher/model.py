@@ -1,4 +1,5 @@
 from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic, delete_pod_query, delete_node_query, set_k8snode_metrics
+from kubegrapher.transactions import delete_orphans
 import uuid
 
 def toString(properties=None, kwargs=None):
@@ -50,18 +51,7 @@ class Node():
         return result.single()
     
     @classmethod
-    def delete_orphans(self, tx, type):
-        query = f"""
-            MATCH (n:{type})
-            WHERE (NOT (n)--())
-            DELETE (n)
-            """
-        result = tx.run(query)
-        summary = result.consume()
-        return summary.counters.nodes_deleted
-    
-    @classmethod
-    def delete_node(self, tx, type, **kwargs):
+    def delete(cls, tx, type, **kwargs):
         query = delete_node_query(type, **kwargs)
         print('\n' + query + '\n')
         result = tx.run(query, **kwargs)
@@ -180,14 +170,14 @@ class Pod(Node):
             print(result)
 
     @classmethod
-    def delete(self, tx: callable, **kwargs):
+    def delete(cls, tx: callable, **kwargs):
         query = delete_pod_query(**kwargs)
         print('\n' + query + '\n')
         result = tx.run(query, **kwargs)
         summary = result.consume()
         relationships_deleted = summary.counters.relationships_deleted
-        labels_deleted = Node.delete_orphans(tx, "Label")
-        annots_deleted = Node.delete_orphans(tx, "Annotation")
+        labels_deleted = delete_orphans(tx, "Label")
+        annots_deleted = delete_orphans(tx, "Annotation")
         nodes_deleted = summary.counters.nodes_deleted + labels_deleted + annots_deleted
         print(f"\nDeleted {nodes_deleted} graph nodes and {relationships_deleted} relationships")
 
@@ -313,20 +303,20 @@ class K8sNode(Node):
             print(result)
     
     @classmethod
-    def set(self, tx: callable, cluster_id: str, hostname: str, metrics: dict[str: any]):
+    def set(cls, tx: callable, cluster_id: str, hostname: str, metrics: dict[str: any]):
         query = set_k8snode_metrics(metrics=metrics)
         print('\n' + query + '\n')
         result = tx.run(query, metrics, hostname=hostname, cluster_id=cluster_id)
-        return result.single()
+        print(result.single())
     
     @classmethod
-    def delete(self, tx, **kwargs):
-        summary = Node.delete_node(tx, "K8sNode", **kwargs)
+    def delete(cls, tx, **kwargs):
+        summary = Node.delete(tx, "K8sNode", **kwargs)
         relationships_deleted = summary.counters.relationships_deleted
-        labels_deleted = Node.delete_orphans(tx, "Label")
-        annotations_deleted = self.delete_orphans(tx, "Annotation")
-        taints_deleted = Node.delete_orphans(tx, "Taint")
-        images_deleted = Node.delete_orphans(tx, "Image")
+        labels_deleted = delete_orphans(tx, "Label")
+        annotations_deleted = delete_orphans(tx, "Annotation")
+        taints_deleted = delete_orphans(tx, "Taint")
+        images_deleted = delete_orphans(tx, "Image")
         nodes_deleted = summary.counters.nodes_deleted + labels_deleted + annotations_deleted + taints_deleted + images_deleted
         print(f"\nDeleted {nodes_deleted} graph nodes and {relationships_deleted} relationships")
 
