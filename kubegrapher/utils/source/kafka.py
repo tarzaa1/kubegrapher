@@ -26,7 +26,6 @@ class Kafka(Source):
                     elif msg.error():
                         raise KafkaException(msg.error())
                 else:
-                    print(f"The topic name is {msg.topic()}")
                     msg_process(grapher, None, None, msg.value(), msg.topic())
         finally:
             # Close down consumer to commit final offsets.
