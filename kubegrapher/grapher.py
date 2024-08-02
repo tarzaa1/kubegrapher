@@ -1,7 +1,5 @@
 from kubegrapher.utils.graph.neo4j import Neo4j
-from kubegrapher.model import Node
-from kubegrapher.update import K8sNodeMetrics
-from kubegrapher.cypher import delete_node_query, delete_pod_query
+from kubegrapher.model import *
 import json
 
 class Grapher(object):
@@ -10,21 +8,21 @@ class Grapher(object):
 
     def merge(self, resource: Node):
         self.db.execute_write(resource.merge)
+    
+    def set_k8s_node(self, cluster_id: str, node_name: str, metrics: dict[str: any]):
+        self.db.execute_write(K8sNode.set, cluster_id=cluster_id, hostname=node_name, metrics=metrics)
 
-    def set(self, resource: Node | K8sNodeMetrics):
-        self.db.execute_write(resource.set)
+    def delete_k8s_node(self, name: str):
+        self.db.execute_write(K8sNode.delete, name=name)
+
+    def delete_pod(self, name: str):
+        self.db.execute_write(Pod.delete, name=name)
 
     def link(self, resource: Node, target: Node, type: str):
         def show_result(tx, resource, target, type):
             result = resource.link(tx, type, target)
             print(result)
         self.db.execute_write(show_result, resource, target, type)
-
-    def deletePod(self, name):
-        self.db.execute_write(self.delete_pod, name=name)
-
-    def deleteNode(self, name):
-        self.db.execute_write(self.delete_k8snode, name=name)
 
     def get_counts(self):
         self.db.execute_read(self.stats)
@@ -34,43 +32,6 @@ class Grapher(object):
 
     def clear(self):
         self.db.delete_all()
-
-    def delete_pod(self, tx, **kwargs):
-        query = delete_pod_query(**kwargs)
-        print('\n' + query + '\n')
-        result = tx.run(query, **kwargs)
-        summary = result.consume()
-        relationships_deleted = summary.counters.relationships_deleted
-        labels_deleted = self.delete_orphans(tx, "Label")
-        annots_deleted = self.delete_orphans(tx, "Annotation")
-        nodes_deleted = summary.counters.nodes_deleted + labels_deleted + annots_deleted
-        print(f"\nDeleted {nodes_deleted} graph nodes and {relationships_deleted} relationships")
-
-    def delete_k8snode(self, tx, **kwargs):
-        summary = self.delete_node(tx, "K8sNode", **kwargs)
-        relationships_deleted = summary.counters.relationships_deleted
-        labels_deleted = self.delete_orphans(tx, "Label")
-        annotations_deleted = self.delete_orphans(tx, "Annotation")
-        taints_deleted = self.delete_orphans(tx, "Taint")
-        images_deleted = self.delete_orphans(tx, "Image")
-        nodes_deleted = summary.counters.nodes_deleted + labels_deleted + annotations_deleted + taints_deleted + images_deleted
-        print(f"\nDeleted {nodes_deleted} graph nodes and {relationships_deleted} relationships")
-
-    def delete_node(self, tx, type, **kwargs):
-        query = delete_node_query(type, **kwargs)
-        print('\n' + query + '\n')
-        result = tx.run(query, **kwargs)
-        return result.consume()
-
-    def delete_orphans(self, tx, type):
-        query = f"""
-            MATCH (n:{type})
-            WHERE (NOT (n)--())
-            DELETE (n)
-            """
-        result = tx.run(query)
-        summary = result.consume()
-        return summary.counters.nodes_deleted
 
     def count(self, tx, type):
         query = f"""
