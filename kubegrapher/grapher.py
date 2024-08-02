@@ -62,5 +62,4 @@ if __name__ == '__main__':
     AUTH = ("neo4j", "password")
     
     graphdb = Neo4j(URI, AUTH)
-    grapher = Grapher(graphdb)
     graphdb.delete_all()
