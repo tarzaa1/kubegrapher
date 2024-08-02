@@ -61,16 +61,15 @@ def processMessage(grapher: Grapher, *args):
 
     if action == 'Delete':
         if kind == 'Pod':
-            grapher.deletePod(name=body)
+            grapher.delete_pod(name=body)
         elif kind == 'Node':
-            grapher.deleteNode(name=body)
+            grapher.delete_k8s_node(name=body)
 
     if action == 'Update':
         if kind == 'Metrics':
-            print(body)
             metrics_lst = parser.parse_metrics(topic_name, body)
             for metrics in metrics_lst:
-                grapher.set(metrics)
+                grapher.set_k8s_node(*metrics)
     
     grapher.get_counts()
     # grapher.get_subgraph()
