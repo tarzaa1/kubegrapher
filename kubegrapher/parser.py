@@ -170,6 +170,24 @@ def parse_pod(pod: dict[str, any]) -> Pod:
             'qosClass': status.get('qosClass', '')
         }
 
+        # handling resources
+        cpu_request_lst = []
+        memory_request_lst = []
+        cpu_limit_lst = []
+        memory_limit_lst = []
+
+        for container in spec.get('containers', {}):
+            resources = container.get('resources', {})
+            cpu_request_lst.append(resources.get('requests', {}).get('cpu')) 
+            memory_request_lst.append(resources.get('requests', {}).get('memory'))
+            cpu_limit_lst.append(resources.get('limits', {}).get('cpu'))
+            memory_limit_lst.append(resources.get('limits', {}).get('memory'))
+
+        properties["request_cpu"] =  _sum_string_list(cpu_request_lst)
+        properties["request_memory"] = _sum_string_list(memory_request_lst)
+        properties["limit_cpu"] = _sum_string_list(cpu_limit_lst)
+        properties["limit_memory"] = _sum_string_list(memory_limit_lst)
+
         nodeName = spec.get('nodeName', '')
         # tolerations = spec.get('tolerations', [])
         containerStatuses = {containerStatus['name']: containerStatus for containerStatus in status.get('containerStatuses', [])}
@@ -265,3 +283,23 @@ def parse_metrics(cluster_id: str, metrics: dict[str, any]):
     except Exception as e:
         logging.error(f"Error parsing Metrics: {e}")
         return None
+
+def _sum_string_list(str_list):
+    if not str_list:
+        return ""
+    total = 0
+    suffix = None
+    for item in str_list:
+        # break and return "" if contains None
+        if not item:
+            return ""
+        # Separate numeric value and suffix
+        num = ""
+        for char in item:
+            if char.isdigit():
+                num += char
+            else:
+                suffix = item[len(num):]
+                break
+        total += int(num)
+    return f"{total}{suffix}"
