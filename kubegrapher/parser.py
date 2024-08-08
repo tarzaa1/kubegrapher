@@ -285,21 +285,18 @@ def parse_metrics(cluster_id: str, metrics: dict[str, any]):
         return None
 
 def _sum_string_list(str_list):
-    if not str_list:
-        return ""
     total = 0
-    suffix = None
+    suffix = ""
     for item in str_list:
-        # break and return "" if contains None
         if not item:
-            return ""
-        # Separate numeric value and suffix
+            break
         num = ""
         for char in item:
             if char.isdigit():
                 num += char
             else:
-                suffix = item[len(num):]
+                if not suffix:
+                    suffix = item[len(num):]
                 break
         total += int(num)
-    return f"{total}{suffix}"
+    return f"{total}{suffix}" if total != 0 else ""
