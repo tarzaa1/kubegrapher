@@ -194,18 +194,23 @@ def parse_container(container: dict[str, any], containerStatus: dict[str, any]) 
             'imagePullPolicy': container.get('imagePullPolicy', ''),
             'terminationMessagePath': container.get('terminationMessagePath', ''),
             'terminationMessagePolicy': container.get('terminationMessagePolicy', ''),
+            "request_cpu": 0,
+            "request_memory": 0,
+            "limit_cpu": 0,
+            "limit_memory": 0,
         }
 
         resources = container.get('resources', {})
-        cpu_request = resources.get('requests', {}).get('cpu') 
-        memory_request = resources.get('requests', {}).get('memory')
-        cpu_limit = resources.get('limits', {}).get('cpu')
-        memory_limit = resources.get('limits', {}).get('memory')
+        if resources:
+            cpu_request = resources.get('requests', {}).get('cpu') 
+            memory_request = resources.get('requests', {}).get('memory')
+            cpu_limit = resources.get('limits', {}).get('cpu')
+            memory_limit = resources.get('limits', {}).get('memory')
 
-        properties["request_cpu"] = extract_number(cpu_request)
-        properties["request_memory"] = extract_number(memory_request)
-        properties["limit_cpu"] = extract_number(cpu_limit)
-        properties["limit_memory"] = extract_number(memory_limit)
+            properties["request_cpu"] = extract_number(cpu_request)
+            properties["request_memory"] = extract_number(memory_request)
+            properties["limit_cpu"] = extract_number(cpu_limit)
+            properties["limit_memory"] = extract_number(memory_limit)
 
         container_id = containerStatus.get('containerID', '')
         image_name = containerStatus.get('image', '')
