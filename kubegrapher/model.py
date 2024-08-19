@@ -134,7 +134,6 @@ class Service(Node):
         print(super().merge(tx))
         # selectors handling
         selector_label_dict = json.loads(self.properties["selector"])
-        print(selector_label_dict)
         if selector_label_dict:
             pass
         else:
