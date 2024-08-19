@@ -1,6 +1,7 @@
 from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic, delete_pod_query, delete_node_query, set_k8snode_metrics
 from kubegrapher.transactions import delete_orphans
 import uuid
+import json
 
 def toString(properties=None, kwargs=None):
     properties_str = None
@@ -131,6 +132,17 @@ class Service(Node):
 
     def merge(self, tx: callable):
         print(super().merge(tx))
+        # selectors handling
+        selector_label_dict = json.loads(self.properties["selector"])
+        print(selector_label_dict)
+        if selector_label_dict:
+            pass
+        else:
+            for k, v in selector_label_dict.items():
+                label = Label(k, v)
+                label.merge(tx)
+                result = self.link(tx, type='HAS_SELECTOR', target=label)
+                print(result)
 
 class Pod(Node):
     def __init__(self, uid: str, k8snode_name: str, properties: dict[str: any] = {}, labels: list[Label] = {}, annotations: list[Annotation] = {}, containers: list[Container] = [], replicaset_uid: str = None) -> None:
