@@ -1,4 +1,4 @@
-from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic, delete_pod_query, delete_node_query, set_k8snode_metrics
+from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic, delete_pod_query, delete_node_query, set_k8snode_metrics, merge_relationship_service_expose_pod
 from kubegrapher.transactions import delete_orphans
 import uuid
 import json
@@ -129,6 +129,12 @@ class ConfigMap(Node):
 class Service(Node):
     def __init__(self, uid: str, properties: dict = None, **kwargs) -> None:
         super().__init__(type=self.__class__.__name__, uid=uid, properties=properties)
+    
+    def link_pod(self, tx: callable):
+        query = merge_relationship_service_expose_pod(known_service = True)
+        print('\n' + query + '\n')
+        result = tx.run(query, service_id = self.id)
+        return result.single()
 
     def merge(self, tx: callable):
         print(super().merge(tx))
@@ -142,6 +148,8 @@ class Service(Node):
                 label.merge(tx)
                 result = self.link(tx, type='HAS_SELECTOR', target=label)
                 print(result)
+        # link service and pod
+        self.link_pod(tx)
 
 class Pod(Node):
     def __init__(self, uid: str, k8snode_name: str, properties: dict[str: any] = {}, labels: list[Label] = {}, annotations: list[Annotation] = {}, containers: list[Container] = [], replicaset_uid: str = None) -> None:
@@ -180,6 +188,10 @@ class Pod(Node):
             result = self.link(tx, type='RUNS_CONTAINER', target=container)
             print(result)
 
+        # link service and pod
+        self.link_service(tx)
+
+
     @classmethod
     def delete(cls, tx: callable, **kwargs):
         query = delete_pod_query(**kwargs)
@@ -191,6 +203,12 @@ class Pod(Node):
         annots_deleted = delete_orphans(tx, "Annotation")
         nodes_deleted = summary.counters.nodes_deleted + labels_deleted + annots_deleted
         print(f"\nDeleted {nodes_deleted} graph nodes and {relationships_deleted} relationships")
+
+    def link_service(self, tx: callable):
+        query = merge_relationship_service_expose_pod(known_pod = True)
+        print('\n' + query + '\n')
+        result = tx.run(query, pod_id = self.id)
+        return result.single()
 
     def __str__(self):
         representations = []
