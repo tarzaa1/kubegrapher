@@ -78,6 +78,25 @@ def merge_relationship_generic(type: str, from_type: str, to_type: str, to_prope
 
     return query
 
+def merge_relationship_service_expose_pod(known_service = False, known_pod = False):
+    if known_service and not known_pod:
+        query = f"""
+        MATCH (p:Pod) -[HAS_LABEL]-> (l1:Label), (s:Service {{id: $service_id}}) -[HAS_SELECTOR]-> (l2:Label)
+        WITH p, s, COLLECT(l1) AS l1Nodes, COLLECT(l2) AS l2Nodes
+        WHERE ALL(l1Node IN l1Nodes WHERE l1Node IN l2Nodes)
+        MERGE (s)-[r:EXPOSE]->(p)
+        """
+    elif known_pod and not known_service:
+        query = f"""
+        MATCH (p:Pod {{id: $pod_id}}) -[HAS_LABEL]-> (l1:Label), (s:Service) -[HAS_SELECTOR]-> (l2:Label)
+        WITH p, s, COLLECT(l1) AS l1Nodes, COLLECT(l2) AS l2Nodes
+        WHERE ALL(l1Node IN l1Nodes WHERE l1Node IN l2Nodes)
+        MERGE (s)-[r:EXPOSE]->(p)
+        """
+    else:
+        raise NotImplementedError
+    return query
+
 def set_k8snode_metrics(metrics: dict[str: any]):
     placeholders = _placeholders(metrics)
     query = f"""
