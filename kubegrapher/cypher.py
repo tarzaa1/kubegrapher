@@ -1,3 +1,5 @@
+from kubegrapher.relations import Relations
+
 def _placeholders(properties=None, kwargs=None):
     properties_placeholders = None
     kwargs_placeholders = None
@@ -80,20 +82,20 @@ def merge_relationship_generic(type: str, from_type: str, to_type: str, to_prope
 
 def merge_relationship_service_to_pod():
     query = f"""
-    MATCH (s:Service {{id: $service_id}}) -[:HAS_SELECTOR]-> (l:Label)
+    MATCH (s:Service {{id: $service_id}}) -[:{Relations.HAS_SELECTOR}]-> (l:Label)
     WITH s, collect(l) AS selectorLst
     MATCH (p:Pod)
-    WHERE ALL (label IN selectorLst WHERE (p) -[:HAS_LABEL]-> (label))
+    WHERE ALL (label IN selectorLst WHERE (p) -[:{Relations.HAS_LABEL}]-> (label))
     MERGE (s) -[r:EXPOSE]-> (p)
     """
     return query
 
 def merge_relationship_pod_to_service():
     query = f"""
-    MATCH (p:Pod {{id: $pod_id}}) -[:HAS_LABEL]-> (l:Label)
+    MATCH (p:Pod {{id: $pod_id}}) -[:{Relations.HAS_LABEL}]-> (l:Label)
     WITH p, collect(l) AS labelLst
     MATCH (s:Service)
-    WHERE ALL (selector IN labelLst WHERE (s) -[:HAS_SELECTOR]-> (selector))
+    WHERE ALL (selector IN labelLst WHERE (s) -[:{Relations.HAS_SELECTOR}]-> (selector))
     MERGE (s) -[r:EXPOSE]-> (p)
     """
     return query
@@ -101,7 +103,7 @@ def merge_relationship_pod_to_service():
 def set_k8snode_metrics(metrics: dict[str: any]):
     placeholders = _placeholders(metrics)
     query = f"""
-    MATCH (n:K8sNode {{hostname: $hostname}}) -[BELONGS_TO]-> (c:Cluster)
+    MATCH (n:K8sNode {{hostname: $hostname}}) -[{Relations.BELONGS_TO}]-> (c:Cluster)
     WHERE c.id = $cluster_id
     SET n += {{{placeholders}}}
     RETURN n

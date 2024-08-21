@@ -2,6 +2,7 @@ from kubegrapher.utils.graph import Neo4j
 from kubegrapher.utils.source import Hedera, Kafka
 from kubegrapher.grapher import Grapher
 from kubegrapher.model import K8sNode, Cluster
+from kubegrapher.relations import Relations
 import kubegrapher.parser as parser
 
 import os, sys
@@ -53,7 +54,7 @@ def processMessage(grapher: Grapher, *args):
             image = parser.parse_image(body['data'])
             node = K8sNode(body['nodeUID'])
             grapher.merge(image)
-            grapher.link(node, image, 'STORES_IMAGE')
+            grapher.link(node, image, Relations.STORES_IMAGE)
         elif kind == 'Done':
             grapher.clear()                
         else:

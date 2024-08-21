@@ -2,6 +2,7 @@ from kubegrapher.cypher import merge_node, merge_relationship, to_properties, \
     merge_relationship_generic, delete_pod_query, delete_node_query, set_k8snode_metrics, \
     merge_relationship_pod_to_service, merge_relationship_service_to_pod
 from kubegrapher.transactions import delete_orphans
+from kubegrapher.relations import Relations
 import uuid
 import json
 
@@ -85,10 +86,10 @@ class Container(Node):
     
     def merge(self, tx: callable):
         print(super().merge(tx))
-        result = self.link_generic(tx, type='INSTANTIATES_IMAGE', target=Node(type='Image', name=self.imageName))
+        result = self.link_generic(tx, type=Relations.INSTANTIATES_IMAGE, target=Node(type='Image', name=self.imageName))
         print(result)
         if self.configMapName is not None:
-            result = self.link_generic(tx, type='CONFIGMAP_REF', target=Node(type='ConfigMap', name=self.configMapName))
+            result = self.link_generic(tx, type=Relations.CONFIGMAP_REF, target=Node(type='ConfigMap', name=self.configMapName))
             print(result)
 
     def __str__(self):
@@ -148,7 +149,7 @@ class Service(Node):
             for k, v in selector_label_dict.items():
                 label = Label(k, v)
                 label.merge(tx)
-                result = self.link(tx, type='HAS_SELECTOR', target=label)
+                result = self.link(tx, type=Relations.HAS_SELECTOR, target=label)
                 print(result)
         # link service and pod
         self.link_pod(tx)
@@ -168,26 +169,26 @@ class Pod(Node):
 
         for label in self.labels:
             label.merge(tx)
-            result = self.link(tx, type='HAS_LABEL', target=label)
+            result = self.link(tx, type=Relations.HAS_LABEL, target=label)
             print(result)
 
         for annotation in self.annotations:
             annotation.merge(tx)
-            result = self.link(tx, type='HAS_ANNOTATION', target=annotation)
+            result = self.link(tx, type=Relations.HAS_ANNOTATION, target=annotation)
             print(result)
 
         # link to replicaset
         if self.replicaSetUID is not None:
-            result = self.link(tx, type='MANAGED_BY', target=Node(type='ReplicaSet', uid=self.replicaSetUID))
+            result = self.link(tx, type=Relations.MANAGED_BY, target=Node(type='ReplicaSet', uid=self.replicaSetUID))
             print(result)
         
         # link to node
-        result = self.link_generic(tx, type='SCHEDULED_ON', target=Node(type='K8sNode', name=self.k8sNodeName))
+        result = self.link_generic(tx, type=Relations.SCHEDULED_ON, target=Node(type='K8sNode', name=self.k8sNodeName))
         print(result)
 
         for container in self.containers:
             container.merge(tx)
-            result = self.link(tx, type='RUNS_CONTAINER', target=container)
+            result = self.link(tx, type=Relations.RUNS_CONTAINER, target=container)
             print(result)
 
         # link service and pod
@@ -237,12 +238,12 @@ class Deployment(Node):
 
         for label in self.labels:
             label.merge(tx)
-            result = self.link(tx, type='HAS_LABEL', target=label)
+            result = self.link(tx, type=Relations.HAS_LABEL, target=label)
             print(result)
 
         for annotation in self.annotations:
             annotation.merge(tx)
-            result = self.link(tx, type='HAS_ANNOTATION', target=annotation)
+            result = self.link(tx, type=Relations.HAS_ANNOTATION, target=annotation)
             print(result)
 
     def __str__(self):
@@ -267,15 +268,15 @@ class ReplicaSet(Node):
 
         for label in self.labels:
             label.merge(tx)
-            result = self.link(tx, type='HAS_LABEL', target=label)
+            result = self.link(tx, type=Relations.HAS_LABEL, target=label)
             print(result)
 
         for annotation in self.annotations:
             annotation.merge(tx)
-            result = self.link(tx, type='HAS_ANNOTATION', target=annotation)
+            result = self.link(tx, type=Relations.HAS_ANNOTATION, target=annotation)
             print(result)
 
-        result = self.link(tx, type='MANAGED_BY', target=Node(type='Deployment', uid=self.deploymentUID))
+        result = self.link(tx, type=Relations.MANAGED_BY, target=Node(type='Deployment', uid=self.deploymentUID))
         print(result)
     
     def __str__(self):
@@ -311,26 +312,26 @@ class K8sNode(Node):
     def merge(self, tx: callable):
         print(super().merge(tx))
 
-        result = self.link(tx, type='BELONGS_TO', target=Node("Cluster", uid=self.cluster_uid))
+        result = self.link(tx, type=Relations.BELONGS_TO, target=Node("Cluster", uid=self.cluster_uid))
 
         for label in self.labels:
             label.merge(tx)
-            result = self.link(tx, type='HAS_LABEL', target=label)
+            result = self.link(tx, type=Relations.HAS_LABEL, target=label)
             print(result)
 
         for annotation in self.annotations:
             annotation.merge(tx)
-            result = self.link(tx, type='HAS_ANNOTATION', target=annotation)
+            result = self.link(tx, type=Relations.HAS_ANNOTATION, target=annotation)
             print(result)
 
         for taint in self.taints:
             taint.merge(tx)
-            result = self.link(tx, type='HAS_TAINT', target=taint)
+            result = self.link(tx, type=Relations.HAS_TAINT, target=taint)
             print(result)
 
         for image in self.images:
             image.merge(tx)
-            result = self.link(tx, type='STORES_IMAGE', target=image)
+            result = self.link(tx, type=Relations.STORES_IMAGE, target=image)
             print(result)
     
     @classmethod
