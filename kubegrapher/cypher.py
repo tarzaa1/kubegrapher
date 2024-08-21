@@ -86,7 +86,7 @@ def merge_relationship_service_to_pod():
     WITH s, collect(l) AS selectorLst
     MATCH (p:Pod)
     WHERE ALL (label IN selectorLst WHERE (p) -[:{Relations.HAS_LABEL}]-> (label))
-    MERGE (s) -[r:EXPOSE]-> (p)
+    MERGE (s) -[r:{Relations.EXPOSES}]-> (p)
     """
     return query
 
@@ -96,7 +96,7 @@ def merge_relationship_pod_to_service():
     WITH p, collect(l) AS labelLst
     MATCH (s:Service)
     WHERE ALL (selector IN labelLst WHERE (s) -[:{Relations.HAS_SELECTOR}]-> (selector))
-    MERGE (s) -[r:EXPOSE]-> (p)
+    MERGE (s) -[r:{Relations.EXPOSES}]-> (p)
     """
     return query
 
