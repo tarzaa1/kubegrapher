@@ -78,25 +78,24 @@ def merge_relationship_generic(type: str, from_type: str, to_type: str, to_prope
 
     return query
 
-def merge_relationship_service_expose_pod(known_service = False, known_pod = False):
-    if known_service and not known_pod:
-        query = f"""
-        MATCH (s:Service {{id: $service_id}}) -[:HAS_SELECTOR]-> (l:Label)
-        WITH s, collect(l) AS selectorLst
-        MATCH (p:Pod)
-        WHERE ALL (label IN selectorLst WHERE (p) -[:HAS_LABEL]-> (label))
-        MERGE (s) -[r:EXPOSE]-> (p)
-        """
-    elif known_pod and not known_service:
-        query = f"""
-        MATCH (p:Pod {{id: $pod_id}}) -[:HAS_LABEL]-> (l:Label)
-        WITH p, collect(l) AS labelLst
-        MATCH (s:Service)
-        WHERE ALL (selector IN labelLst WHERE (s) -[:HAS_SELECTOR]-> (selector))
-        MERGE (s) -[r:EXPOSE]-> (p)
-        """
-    else:
-        raise NotImplementedError
+def merge_relationship_service_to_pod():
+    query = f"""
+    MATCH (s:Service {{id: $service_id}}) -[:HAS_SELECTOR]-> (l:Label)
+    WITH s, collect(l) AS selectorLst
+    MATCH (p:Pod)
+    WHERE ALL (label IN selectorLst WHERE (p) -[:HAS_LABEL]-> (label))
+    MERGE (s) -[r:EXPOSE]-> (p)
+    """
+    return query
+
+def merge_relationship_pod_to_service():
+    query = f"""
+    MATCH (p:Pod {{id: $pod_id}}) -[:HAS_LABEL]-> (l:Label)
+    WITH p, collect(l) AS labelLst
+    MATCH (s:Service)
+    WHERE ALL (selector IN labelLst WHERE (s) -[:HAS_SELECTOR]-> (selector))
+    MERGE (s) -[r:EXPOSE]-> (p)
+    """
     return query
 
 def set_k8snode_metrics(metrics: dict[str: any]):

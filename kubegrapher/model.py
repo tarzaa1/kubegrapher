@@ -1,4 +1,6 @@
-from kubegrapher.cypher import merge_node, merge_relationship, to_properties, merge_relationship_generic, delete_pod_query, delete_node_query, set_k8snode_metrics, merge_relationship_service_expose_pod
+from kubegrapher.cypher import merge_node, merge_relationship, to_properties, \
+    merge_relationship_generic, delete_pod_query, delete_node_query, set_k8snode_metrics, \
+    merge_relationship_pod_to_service, merge_relationship_service_to_pod
 from kubegrapher.transactions import delete_orphans
 import uuid
 import json
@@ -131,7 +133,7 @@ class Service(Node):
         super().__init__(type=self.__class__.__name__, uid=uid, properties=properties)
     
     def link_pod(self, tx: callable):
-        query = merge_relationship_service_expose_pod(known_service = True)
+        query = merge_relationship_service_to_pod()
         print('\n' + query + '\n')
         result = tx.run(query, service_id = self.id)
         return result.single()
@@ -205,7 +207,7 @@ class Pod(Node):
         print(f"\nDeleted {nodes_deleted} graph nodes and {relationships_deleted} relationships")
 
     def link_service(self, tx: callable):
-        query = merge_relationship_service_expose_pod(known_pod = True)
+        query = merge_relationship_pod_to_service()
         print('\n' + query + '\n')
         result = tx.run(query, pod_id = self.id)
         return result.single()
