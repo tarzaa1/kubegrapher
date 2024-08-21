@@ -265,7 +265,7 @@ def parse_service(service: dict[str, any]) -> Service:
         labels = [Label(key, value) for key, value in metadata.get('labels', {}).items()]
         annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
 
-        return Service(uid, properties)
+        return Service(uid, properties, labels=labels)
     except Exception as e:
         logging.error(f"Error parsing Service: {e}")
         return None

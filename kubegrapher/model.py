@@ -130,8 +130,9 @@ class ConfigMap(Node):
         print(super().merge(tx))
 
 class Service(Node):
-    def __init__(self, uid: str, properties: dict = None, **kwargs) -> None:
+    def __init__(self, uid: str, properties: dict = None, labels: list[Label] = {}, **kwargs) -> None:
         super().__init__(type=self.__class__.__name__, uid=uid, properties=properties)
+        self.labels = labels
     
     def link_pod(self, tx: callable):
         query = merge_relationship_service_to_pod()
@@ -141,6 +142,11 @@ class Service(Node):
 
     def merge(self, tx: callable):
         print(super().merge(tx))
+        # merge and link all labels
+        for label in self.labels:
+            label.merge(tx)
+            result = self.link(tx, type=Relations.HAS_LABEL, target=label)
+            print(result)
         # selectors handling
         selector_label_dict = json.loads(self.properties["selector"])
         if not selector_label_dict:
