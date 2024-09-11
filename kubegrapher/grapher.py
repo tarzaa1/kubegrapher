@@ -55,6 +55,7 @@ class Grapher(object):
         self.count(tx, 'Taint')
         self.count(tx, 'Service')
         self.count(tx, 'ConfigMap')
+        self.count(tx, 'Ingress')
 
 if __name__ == '__main__':
 

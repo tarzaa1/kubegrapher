@@ -55,6 +55,11 @@ def processMessage(grapher: Grapher, *args):
             node = K8sNode(body['nodeUID'])
             grapher.merge(image)
             grapher.link(node, image, Relations.STORES_IMAGE)
+        elif kind == 'Ingress':
+            ingress = parser.parse_ingress(body, topic_name)
+            grapher.merge(ingress)
+            pass
+
         elif kind == 'Done':
             grapher.clear()                
         else:
