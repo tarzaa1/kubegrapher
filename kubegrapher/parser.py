@@ -9,7 +9,8 @@ from kubegrapher.model import (
     Deployment, 
     ReplicaSet, 
     Container, 
-    Pod
+    Pod,
+    Ingress
 )
 import logging
 import json
@@ -282,6 +283,30 @@ def parse_metrics(cluster_id: str, metrics: dict[str, any]):
     
     except Exception as e:
         logging.error(f"Error parsing Metrics: {e}")
+        return None
+    
+def parse_ingress(ingress: dict[str, any], topic_name: str) -> Ingress:
+    try:
+        metadata = ingress.get('metadata', {})
+        spec = ingress.get('spec', {})
+        status = ingress.get('status', {})
+        cluster_id = topic_name
+
+        uid = metadata.get('uid')
+        if not uid:
+            raise ValueError("UID is missing in the ingress metadata")
+
+        properties = {
+            'name': metadata.get('name', ''),
+            'creationTimestamp': metadata.get('creationTimestamp', ''),
+            'ingressClassName': spec.get('ingressClassName', ''),
+            'rules': json.dumps(spec.get('rules', [])),
+        }
+        annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
+
+        return Ingress(uid, properties, annotations, cluster_id)
+    except Exception as e:
+        logging.error(f"Error parsing Ingress: {e}")
         return None
 
 def _sum_string_list(str_list):
