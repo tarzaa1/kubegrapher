@@ -100,6 +100,25 @@ def merge_relationship_pod_to_service():
     """
     return query
 
+def merge_relationship_ingress_to_service():
+    query = f"""
+    MATCH (i:Ingress {{id: $ingress_id, cluster_id}}) -[{Relations.BELONGS_TO}]-> (c:Cluster {{id: $cluster_id}})
+    WITH i
+    MATCH (s:Service {{name: $service_name}})
+    MERGE (i) -[r:{Relations.ROUTES_TO}]-> (s)
+    """
+    return query
+
+def merge_relationship_service_to_ingress():
+    query = f"""
+    MATCH (s:Service {{name: $service_name}})
+    WITH s
+    MATCH (i:Ingress)
+    WHERE s.name IN i.service_names
+    MERGE (i) -[r:{Relations.ROUTES_TO}]-> (s)
+    """
+    return query
+
 def set_k8snode_metrics(metrics: dict[str: any]):
     placeholders = _placeholders(metrics)
     query = f"""
