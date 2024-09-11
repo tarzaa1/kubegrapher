@@ -42,7 +42,7 @@ def processMessage(grapher: Grapher, *args):
             pod = parser.parse_pod(body)
             grapher.merge(pod)
         elif kind == 'Service':
-            service = parser.parse_service(body)
+            service = parser.parse_service(body, topic_name)
             grapher.merge(service)
         elif kind == 'Deployment':
             deployment = parser.parse_deployment(body)

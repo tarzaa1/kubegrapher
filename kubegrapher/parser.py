@@ -236,7 +236,7 @@ def parse_image(image: dict[str, any]) -> Image:
         logging.error(f"Error parsing Image: {e}")
         return None
     
-def parse_service(service: dict[str, any]) -> Service:
+def parse_service(service: dict[str, any], topic_name: str) -> Service:
     try:
         metadata = service.get('metadata', {})
         spec = service.get('spec', {})
@@ -266,7 +266,7 @@ def parse_service(service: dict[str, any]) -> Service:
         labels = [Label(key, value) for key, value in metadata.get('labels', {}).items()]
         annotations = [Annotation(key, value) for key, value in metadata.get('annotations', {}).items()]
 
-        return Service(uid, properties, labels=labels)
+        return Service(uid, properties, labels=labels, cluster_id=topic_name)
     except Exception as e:
         logging.error(f"Error parsing Service: {e}")
         return None

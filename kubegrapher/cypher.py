@@ -102,18 +102,18 @@ def merge_relationship_pod_to_service():
 
 def merge_relationship_ingress_to_service():
     query = f"""
-    MATCH (i:Ingress {{id: $ingress_id, cluster_id}}) -[{Relations.BELONGS_TO}]-> (c:Cluster {{id: $cluster_id}})
+    MATCH (i:Ingress {{id: $ingress_id, cluster_id: $cluster_id}})
     WITH i
-    MATCH (s:Service {{name: $service_name}})
+    MATCH (s:Service {{name: $service_name, cluster_id: $cluster_id}})
     MERGE (i) -[r:{Relations.ROUTES_TO}]-> (s)
     """
     return query
 
 def merge_relationship_service_to_ingress():
     query = f"""
-    MATCH (s:Service {{name: $service_name}})
+    MATCH (s:Service {{name: $service_name, cluster_id: $cluster_id}})
     WITH s
-    MATCH (i:Ingress)
+    MATCH (i:Ingress {{cluster_id: $cluster_id}})
     WHERE s.name IN i.service_names
     MERGE (i) -[r:{Relations.ROUTES_TO}]-> (s)
     """

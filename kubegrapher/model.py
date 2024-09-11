@@ -131,9 +131,11 @@ class ConfigMap(Node):
         print(super().merge(tx))
 
 class Service(Node):
-    def __init__(self, uid: str, properties: dict = None, labels: list[Label] = {}, **kwargs) -> None:
+    def __init__(self, uid: str, properties: dict = None, labels: list[Label] = {}, cluster_id: str = None, **kwargs) -> None:
         super().__init__(type=self.__class__.__name__, uid=uid, properties=properties)
         self.labels = labels
+        self.cluster_id = cluster_id
+        self.properties["cluster_id"] = self.cluster_id
     
     def merge(self, tx: callable):
         print(super().merge(tx))
@@ -154,7 +156,7 @@ class Service(Node):
                 print(result)
         # link service and pod
         print(self.link_pod(tx))
-        print(self.link_ingress(tx, self.properties["name"]))
+        print(self.link_ingress(tx, self.properties["name"], self.properties["cluster_id"]))
 
     def link_pod(self, tx: callable):
         query = merge_relationship_service_to_pod()
@@ -162,10 +164,10 @@ class Service(Node):
         result = tx.run(query, service_id = self.id)
         return result.single()
     
-    def link_ingress(self, tx: callable, service_name:str):
+    def link_ingress(self, tx: callable, service_name: str, cluster_id: str):
         query = merge_relationship_service_to_ingress()
         print('\n' + query + '\n')
-        result = tx.run(query, service_name = service_name)
+        result = tx.run(query, service_name = service_name, cluster_id = cluster_id)
         return result.single()
 
 class Pod(Node):
@@ -393,6 +395,7 @@ class Ingress(Node):
         except KeyError:
             print("No service found in Ingress")
         self.properties["services"] = self.services
+        self.properties["cluster_id"] = self.cluster_id
     
     def merge(self, tx: callable):
         print(super().merge(tx))
@@ -400,11 +403,9 @@ class Ingress(Node):
             annotation.merge(tx)
             result = self.link(tx, type=Relations.HAS_ANNOTATION, target=annotation)
             print(result)
-
-        print(self.link(tx, type=Relations.BELONGS_TO, target=Node("Cluster", uid=self.cluster_id)))
-
+            
         for service_name in self.properties["services"]:
-            print(self.link_service(tx, service_name, self.cluster_id))
+            print(self.link_service(tx, service_name, self.properties["cluster_id"]))
 
     def link_service(self, tx: callable, service_name:str, cluster_id: str):
         query = merge_relationship_ingress_to_service()
