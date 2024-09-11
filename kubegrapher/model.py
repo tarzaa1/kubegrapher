@@ -1,6 +1,7 @@
 from kubegrapher.cypher import merge_node, merge_relationship, to_properties, \
     merge_relationship_generic, delete_pod_query, delete_node_query, set_k8snode_metrics, \
-    merge_relationship_pod_to_service, merge_relationship_service_to_pod
+    merge_relationship_pod_to_service, merge_relationship_service_to_pod, \
+    merge_relationship_ingress_to_service, merge_relationship_service_to_ingress
 from kubegrapher.transactions import delete_orphans
 from kubegrapher.relations import Relations
 import uuid
@@ -134,12 +135,6 @@ class Service(Node):
         super().__init__(type=self.__class__.__name__, uid=uid, properties=properties)
         self.labels = labels
     
-    def link_pod(self, tx: callable):
-        query = merge_relationship_service_to_pod()
-        print('\n' + query + '\n')
-        result = tx.run(query, service_id = self.id)
-        return result.single()
-
     def merge(self, tx: callable):
         print(super().merge(tx))
         # merge and link all labels
@@ -158,7 +153,20 @@ class Service(Node):
                 result = self.link(tx, type=Relations.HAS_SELECTOR, target=label)
                 print(result)
         # link service and pod
-        self.link_pod(tx)
+        print(self.link_pod(tx))
+        print(self.link_ingress(tx, self.properties["name"]))
+
+    def link_pod(self, tx: callable):
+        query = merge_relationship_service_to_pod()
+        print('\n' + query + '\n')
+        result = tx.run(query, service_id = self.id)
+        return result.single()
+    
+    def link_ingress(self, tx: callable, service_name:str):
+        query = merge_relationship_service_to_ingress()
+        print('\n' + query + '\n')
+        result = tx.run(query, service_name = service_name)
+        return result.single()
 
 class Pod(Node):
     def __init__(self, uid: str, k8snode_name: str, properties: dict[str: any] = {}, labels: list[Label] = {}, annotations: list[Annotation] = {}, containers: list[Container] = [], replicaset_uid: str = None) -> None:
@@ -370,3 +378,36 @@ class K8sNode(Node):
         if len(self.images) > 0:
             representations.append('\n'.join(image.__str__() for image in self.images))
         return '\n'.join(representation for representation in representations)
+
+class Ingress(Node):
+    def __init__(self, uid: str, properties: dict[str: any] = {}, annotations: list[Annotation] = {}, cluster_id: str = None) -> None:
+        super().__init__(type=self.__class__.__name__, uid=uid, properties=properties)
+        self.annotations = annotations
+        self.cluster_id = cluster_id
+        self.services = []
+        try:
+            rules = json.loads(self.properties["rules"])
+            for rule in rules:
+                for path in rule["http"]["paths"]:
+                    self.services.append(path["backend"]["service"]["name"])
+        except KeyError:
+            print("No service found in Ingress")
+        self.properties["services"] = self.services
+    
+    def merge(self, tx: callable):
+        print(super().merge(tx))
+        for annotation in self.annotations:
+            annotation.merge(tx)
+            result = self.link(tx, type=Relations.HAS_ANNOTATION, target=annotation)
+            print(result)
+
+        print(self.link(tx, type=Relations.BELONGS_TO, target=Node("Cluster", uid=self.cluster_id)))
+
+        for service_name in self.properties["services"]:
+            print(self.link_service(tx, service_name, self.cluster_id))
+
+    def link_service(self, tx: callable, service_name:str, cluster_id: str):
+        query = merge_relationship_ingress_to_service()
+        print('\n' + query + '\n')
+        result = tx.run(query, service_name = service_name, ingress_id = self.id, cluster_id = cluster_id)
+        return result.single()
