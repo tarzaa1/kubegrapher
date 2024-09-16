@@ -14,6 +14,7 @@ from kubegrapher.model import (
 )
 import logging
 import json
+import re
 
 logging.basicConfig(level=logging.INFO)
 
@@ -171,24 +172,6 @@ def parse_pod(pod: dict[str, any]) -> Pod:
             'qosClass': status.get('qosClass', '')
         }
 
-        # handling resources
-        cpu_request_lst = []
-        memory_request_lst = []
-        cpu_limit_lst = []
-        memory_limit_lst = []
-
-        for container in spec.get('containers', {}):
-            resources = container.get('resources', {})
-            cpu_request_lst.append(resources.get('requests', {}).get('cpu')) 
-            memory_request_lst.append(resources.get('requests', {}).get('memory'))
-            cpu_limit_lst.append(resources.get('limits', {}).get('cpu'))
-            memory_limit_lst.append(resources.get('limits', {}).get('memory'))
-
-        properties["request_cpu"] =  _sum_string_list(cpu_request_lst)
-        properties["request_memory"] = _sum_string_list(memory_request_lst)
-        properties["limit_cpu"] = _sum_string_list(cpu_limit_lst)
-        properties["limit_memory"] = _sum_string_list(memory_limit_lst)
-
         nodeName = spec.get('nodeName', '')
         # tolerations = spec.get('tolerations', [])
         containerStatuses = {containerStatus['name']: containerStatus for containerStatus in status.get('containerStatuses', [])}
@@ -212,7 +195,23 @@ def parse_container(container: dict[str, any], containerStatus: dict[str, any]) 
             'imagePullPolicy': container.get('imagePullPolicy', ''),
             'terminationMessagePath': container.get('terminationMessagePath', ''),
             'terminationMessagePolicy': container.get('terminationMessagePolicy', ''),
+            "request_cpu": 0,
+            "request_memory": 0,
+            "limit_cpu": 0,
+            "limit_memory": 0,
         }
+
+        resources = container.get('resources', {})
+        if resources:
+            cpu_request = resources.get('requests', {}).get('cpu') 
+            memory_request = resources.get('requests', {}).get('memory')
+            cpu_limit = resources.get('limits', {}).get('cpu')
+            memory_limit = resources.get('limits', {}).get('memory')
+
+            properties["request_cpu"] = extract_number(cpu_request)
+            properties["request_memory"] = extract_number(memory_request)
+            properties["limit_cpu"] = extract_number(cpu_limit)
+            properties["limit_memory"] = extract_number(memory_limit)
 
         container_id = containerStatus.get('containerID', '')
         image_name = containerStatus.get('image', '')
@@ -309,19 +308,9 @@ def parse_ingress(ingress: dict[str, any], topic_name: str) -> Ingress:
         logging.error(f"Error parsing Ingress: {e}")
         return None
 
-def _sum_string_list(str_list):
-    total = 0
-    suffix = ""
-    for item in str_list:
-        if not item:
-            break
-        num = ""
-        for char in item:
-            if char.isdigit():
-                num += char
-            else:
-                if not suffix:
-                    suffix = item[len(num):]
-                break
-        total += int(num)
-    return f"{total}{suffix}" if total != 0 else ""
+def extract_number(string):
+    match = re.match(r"(\d+)", string)
+    if match:
+        return int(match.group(1))
+    else:
+        return None
