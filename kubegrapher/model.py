@@ -383,6 +383,29 @@ class K8sNode(Node):
     
     @classmethod
     def set(cls, tx: callable, cluster_id: str, hostname: str, metrics: dict[str: any]):
+        """
+        Updates metrics for a K8sNode in the graph database.
+
+        Parameters:
+            tx (callable): A Neo4j transaction.
+            cluster_id (str)
+            hostname (str): The hostname of the K8sNode.
+            metrics (dict)
+
+        Returns:
+            None
+
+        Example:
+            ```python
+            metrics_data = {
+                "cpu_usage": 0.1,
+                "memory_usage": 20
+            }
+            K8sNode.set(tx=tx, cluster_id="cluster1", hostname="worker1", metrics=metrics_data)
+            ```
+            This would append/update the metrics for the Kubernetes node with hostname "worker1" in the cluster "cluster1".
+            Refer to Grapher.set_k8s_node for more common usage.
+        """
         query = set_k8snode_metrics(metrics=metrics)
         print('\n' + query + '\n')
         result = tx.run(query, metrics, hostname=hostname, cluster_id=cluster_id)
