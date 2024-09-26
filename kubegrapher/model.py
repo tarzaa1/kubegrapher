@@ -43,13 +43,44 @@ class Node():
         result = tx.run(query, self.properties, id=self.id, **self.kwproperties)
         return result.single()
     
-    def link(self, tx: callable, type: str, target: 'Node', properties: dict[str: any] = None, directed = True, reverse = False):
+    def link(self, tx: callable, type: str, target: 'Node', properties: dict[str: any] = None, 
+             directed = True, reverse = False):
+        """
+        Create relationship between two nodes, both two nodes will be matched by UID.
+
+        Parameters:
+            tx (callable): A Neo4j transaction.
+            type (str): The type of the relation to create (e.g., Relations.HAS_LABEL).
+            target (Node): The target node to link to. This node should contain a UID.
+            properties (dict, optional): The properties to be added for the *relation* itself.
+            directed (bool, optional)
+            reverse (bool, optional)
+
+        Returns:
+            Returns a single record
+        """
         query = merge_relationship(type=type, from_type=self.type, to_type=target.type, properties=properties, directed=directed)
         print('\n' + query + '\n')
         result = tx.run(query, from_id=self.id, to_id=target.id)
         return result.single()
 
-    def link_generic(self, tx: callable, type: str, target: 'Node', properties: dict[str: any] = None, directed = True, reverse = False):
+    def link_generic(self, tx: callable, type: str, target: 'Node', properties: dict[str: any] = None, 
+                     directed = True, reverse = False):
+        """
+        Alternative way to create relationship between two nodes, with the target node be matched by properties.
+
+        Parameters:
+            tx (callable): A Neo4j transaction.
+            type (str): The type of the relation to create (e.g., Relations.HAS_LABEL).
+            target (Node): The target node to link to. This node *does not* contain a UID.
+                           The target node will be matched by its properties.
+            properties (dict, optional): The properties to be added for the *relation* itself.
+            directed (bool, optional)
+            reverse (bool, optional)
+
+        Returns:
+            Returns a single record
+        """
         query = merge_relationship_generic(type=type, from_type=self.type, to_type=target.type, to_properties=target.kwproperties, properties=properties, directed=directed)
         print('\n' + query + '\n')
         result = tx.run(query, from_id=self.id, **to_properties(target.kwproperties))
@@ -352,6 +383,29 @@ class K8sNode(Node):
     
     @classmethod
     def set(cls, tx: callable, cluster_id: str, hostname: str, metrics: dict[str: any]):
+        """
+        Updates metrics for a K8sNode in the graph database.
+
+        Parameters:
+            tx (callable): A Neo4j transaction.
+            cluster_id (str)
+            hostname (str): The hostname of the K8sNode.
+            metrics (dict)
+
+        Returns:
+            None
+
+        Example:
+            ```python
+            metrics_data = {
+                "cpu_usage": 0.1,
+                "memory_usage": 20
+            }
+            K8sNode.set(tx=tx, cluster_id="cluster1", hostname="worker1", metrics=metrics_data)
+            ```
+            This would append/update the metrics for the Kubernetes node with hostname "worker1" in the cluster "cluster1".
+            Refer to Grapher.set_k8s_node for more common usage.
+        """
         query = set_k8snode_metrics(metrics=metrics)
         print('\n' + query + '\n')
         result = tx.run(query, metrics, hostname=hostname, cluster_id=cluster_id)
