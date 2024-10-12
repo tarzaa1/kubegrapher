@@ -87,7 +87,7 @@ def main():
         conf = {'bootstrap.servers': KAFKA_BROKER_URL, 
             'group.id': KAFKA_GROUP_ID,
             'auto.offset.reset': 'smallest'}
-        topics = [KAFKA_TOPIC]
+        topics = KAFKA_TOPIC
         consumer = Kafka(conf)
         consumer.subscribe(topics, grapher, processMessage)
     else:
