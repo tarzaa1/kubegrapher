@@ -11,7 +11,7 @@ AUTH = tuple(auth_string.split('/'))
 
 #Kafka
 KAFKA_BROKER_URL = config('KAFKA_BROKER_URL', default='localhost:9092,')
-KAFKA_TOPIC = config('KAFKA_TOPIC')
+KAFKA_TOPIC = config('KAFKA_TOPIC').split(',')
 KAFKA_GROUP_ID = config('KAFKA_GROUP_ID')
 
 #Hedera
