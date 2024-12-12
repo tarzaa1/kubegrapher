@@ -20,14 +20,12 @@ class Kafka(Source):
 
                 if msg.error():
                     if msg.error().code() == KafkaError._PARTITION_EOF:
-                        # End of partition event
                         sys.stderr.write('%% %s [%d] reached end at offset %d\n' %
                                         (msg.topic(), msg.partition(), msg.offset()))
                     elif msg.error():
                         raise KafkaException(msg.error())
                 else:
-                    msg_process(grapher, None, None, msg.value(), msg.topic())
+                    msg_process(grapher, msg.timestamp(), msg.offset(), msg.value(), msg.topic())
         finally:
-            # Close down consumer to commit final offsets.
             self.client.close()
 
