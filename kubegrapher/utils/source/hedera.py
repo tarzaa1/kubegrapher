@@ -27,7 +27,7 @@ class Hedera(Source):
         topicId = TopicId.fromString(topicID)
         # please see https://github.com/wensheng/hcs-grpc-api-py-client for using grpc client
         query = TopicMessageQuery().setTopicId(topicId)
-        query.subscribe(self.client, PyConsumer(processMessage))
+        query.subscribe(self.client, PyConsumer(lambda *args: processMessage(*args, topicID)))
         print("Subscribed to TopicID: ",  topicId.toString())
 
         for i in count():
