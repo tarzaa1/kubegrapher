@@ -1,6 +1,5 @@
 from kubegrapher.utils.graph.neo4j import Neo4j
 from kubegrapher.model import Node, K8sNode, Pod
-import json
 
 class Grapher(object):
     def __init__(self, graphdb: Neo4j) -> None:
@@ -26,9 +25,6 @@ class Grapher(object):
 
     def get_counts(self):
         self.db.execute_read(self.stats)
-
-    def get_subgraph(self):
-        self.db.execute_read(self.subgraph)
 
     def clear(self):
         self.db.delete_all()
