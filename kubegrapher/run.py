@@ -18,13 +18,8 @@ from kubegrapher.conf import (
     AUTH,
 )
 
-def processMessage(grapher: Grapher, *args):
-    message = json.loads(args[2])
-    if len(args) > 3:
-        topic_name = args[3]
-    else:
-        topic_name = "0.0.1003"
-
+def processMessage(grapher: Grapher, timestamp: str, offset: int, msg: str, topic_name: str):
+    message = json.loads(msg)
     action = message['action']
     kind = message['kind']
     body = message['body']
@@ -78,7 +73,6 @@ def processMessage(grapher: Grapher, *args):
                 grapher.set_k8s_node(*metrics)
     
     grapher.get_counts()
-    # grapher.get_subgraph()
 
 def main():
     graphdb = Neo4j(URI, AUTH)
