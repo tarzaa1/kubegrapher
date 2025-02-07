@@ -67,7 +67,7 @@ def processMessage(grapher: Grapher, timestamp: str, offset: int, msg: str, topi
             grapher.delete_k8s_node(name=body)
 
     if action == 'Update':
-        if kind == 'Metrics':
+        if kind == 'NodeMetrics':
             metrics_lst = parser.parse_metrics(topic_name, body)
             for metrics in metrics_lst:
                 grapher.set_k8s_node(*metrics)
