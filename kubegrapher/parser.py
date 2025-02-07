@@ -270,19 +270,35 @@ def parse_service(service: dict[str, any], topic_name: str) -> Service:
         logging.error(f"Error parsing Service: {e}")
         return None
     
-def parse_metrics(cluster_id: str, metrics: dict[str, any]):
+def parse_k8snode_metrics(cluster_id: str, metrics: dict[str, any]):
     metrics_lst = []
     try:
         for node in metrics["items"]:
-            usage = {}
-            for k, v in node["usage"].items():
-                usage["usage_" + k] = v
+            usage = {f"usage_{k}": v for k, v in node["usage"].items()}
             metrics_lst.append((cluster_id, node["metadata"]["name"], usage))
         return metrics_lst
     
     except Exception as e:
         logging.error(f"Error parsing Metrics: {e}")
         return None
+    
+def parse_pod_metrics(metrics: dict[str, any]) -> list[dict[str, any]]:
+    container_usage_list = []
+    try:
+        for pod in metrics["items"]:
+            pod_name = pod["metadata"]["name"]
+            for container in pod["containers"]:
+                usage = container["usage"]
+                container_usage_list.append({
+                    "podName": pod_name,
+                    "containerName": container["name"],
+                    "usage_cpu": usage["cpu"],
+                    "usage_memory": usage["memory"]
+                })
+        return container_usage_list
+    except Exception as e:
+        logging.error(f"Error parsing Metrics: {e}")
+        return []
     
 def parse_ingress(ingress: dict[str, any], topic_name: str) -> Ingress:
     try:
