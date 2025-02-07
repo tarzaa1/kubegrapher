@@ -1,7 +1,8 @@
 from kubegrapher.cypher import merge_node, merge_relationship, to_properties, \
     merge_relationship_generic, delete_pod_query, delete_node_query, set_k8snode_metrics, \
     merge_relationship_pod_to_service, merge_relationship_service_to_pod, \
-    merge_relationship_ingress_to_service, merge_relationship_service_to_ingress
+    merge_relationship_ingress_to_service, merge_relationship_service_to_ingress, \
+    set_pod_metrics
 from kubegrapher.transactions import delete_orphans
 from kubegrapher.relations import Relations
 import uuid
@@ -222,6 +223,14 @@ class Pod(Node):
         annots_deleted = delete_orphans(tx, "Annotation")
         nodes_deleted = summary.counters.nodes_deleted + labels_deleted + annots_deleted
         print(f"\nDeleted {nodes_deleted} graph nodes and {relationships_deleted} relationships")
+    
+    @classmethod
+    def set_metrics(cls, tx: callable, container_usage_lst):
+        query = set_pod_metrics()
+        print('\n' + query + '\n')
+        result = tx.run(query, data=container_usage_lst)
+        for record in result:
+            print(f"Updated Container: {record}\n")
 
     def link_service(self, tx: callable):
         query = merge_relationship_pod_to_service()
@@ -351,7 +360,7 @@ class K8sNode(Node):
             print(result)
     
     @classmethod
-    def set(cls, tx: callable, cluster_id: str, hostname: str, metrics: dict[str: any]):
+    def set_metrics(cls, tx: callable, cluster_id: str, hostname: str, metrics: dict[str: any]):
         query = set_k8snode_metrics(metrics=metrics)
         print('\n' + query + '\n')
         result = tx.run(query, metrics, hostname=hostname, cluster_id=cluster_id)

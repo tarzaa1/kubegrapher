@@ -129,3 +129,13 @@ def set_k8snode_metrics(metrics: dict[str: any]):
     """
     return query
     # https://neo4j.com/docs/cypher-manual/current/clauses/set/#set-setting-properties-using-map
+
+def set_pod_metrics():
+    query = """
+    UNWIND $data AS row
+    MATCH (p:Pod {name: row.podName})-[:RUNS_CONTAINER]->(c:Container {name: row.containerName})
+    SET c.usage_cpu = row.usage_cpu,
+        c.usage_memory = row.usage_memory
+    RETURN c
+    """
+    return query
