@@ -8,8 +8,8 @@ class Grapher(object):
     def merge(self, resource: Node):
         self.db.execute_write(resource.merge)
     
-    def set_k8snode_metrics(self, cluster_id: str, node_name: str, metrics: dict[str: any]):
-        self.db.execute_write(K8sNode.set_metrics, cluster_id=cluster_id, hostname=node_name, metrics=metrics)
+    def set_k8snode_metrics(self, node_usage_lst):
+        self.db.execute_write(K8sNode.set_metrics, node_usage_lst)
     
     def set_pod_metrics(self, container_usage_lst):
         self.db.execute_write(Pod.set_metrics, container_usage_lst)

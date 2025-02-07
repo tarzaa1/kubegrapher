@@ -68,12 +68,11 @@ def processMessage(grapher: Grapher, timestamp: str, offset: int, msg: str, topi
 
     if action == 'Update':
         if kind == 'NodeMetrics':
-            node_metrics_lst = parser.parse_k8snode_metrics(topic_name, body)
-            for node_metrics in node_metrics_lst:
-                grapher.set_k8snode_metrics(*node_metrics)
+            node_usage_lst = parser.parse_k8snode_metrics(topic_name, body)
+            grapher.set_k8snode_metrics(node_usage_lst)
         if kind == 'PodMetrics':
-            pod_metrics_lst = parser.parse_pod_metrics(body)
-            grapher.set_pod_metrics(pod_metrics_lst)
+            pod_usage_lst = parser.parse_pod_metrics(body)
+            grapher.set_pod_metrics(pod_usage_lst)
     
     grapher.get_counts()
 

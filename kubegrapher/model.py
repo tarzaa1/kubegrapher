@@ -360,11 +360,12 @@ class K8sNode(Node):
             print(result)
     
     @classmethod
-    def set_metrics(cls, tx: callable, cluster_id: str, hostname: str, metrics: dict[str: any]):
-        query = set_k8snode_metrics(metrics=metrics)
+    def set_metrics(cls, tx: callable, node_usage_lst):
+        query = set_k8snode_metrics()
         print('\n' + query + '\n')
-        result = tx.run(query, metrics, hostname=hostname, cluster_id=cluster_id)
-        print(result.single())
+        result = tx.run(query, data=node_usage_lst)
+        for record in result:
+            print(f"Updated node: {record}\n")
     
     @classmethod
     def delete(cls, tx, **kwargs):
