@@ -278,8 +278,8 @@ def parse_k8snode_metrics(cluster_id: str, metrics: dict[str, any]) -> list[dict
             node_usage_list.append({
                 "cluster_id": cluster_id,
                 "hostname": node["metadata"]["name"],
-                "usage_cpu": usage["cpu"],
-                "usage_memory": usage["memory"]
+                "usage_cpu": extract_number(usage["cpu"]),
+                "usage_memory": extract_number(usage["memory"])
             })
         return node_usage_list
     except Exception as e:
@@ -296,8 +296,8 @@ def parse_pod_metrics(metrics: dict[str, any]) -> list[dict[str, any]]:
                 container_usage_list.append({
                     "podName": pod_name,
                     "containerName": container["name"],
-                    "usage_cpu": usage["cpu"],
-                    "usage_memory": usage["memory"]
+                    "usage_cpu": extract_number(usage["cpu"]),
+                    "usage_memory": extract_number(usage["memory"])
                 })
         return container_usage_list
     except Exception as e:
