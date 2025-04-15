@@ -4,10 +4,11 @@ DATA_SOURCE = config('DATA_SOURCE', default='hedera')
 
 TIMEZONE = config('TIMEZONE', default='Europe/London')
 
-#Neo4j
+#Database
 URI = config('URI', default='bolt://localhost:7687')
 auth_string = config('AUTH')
 AUTH = tuple(auth_string.split('/'))
+DB_NAME = config('DB_NAME', default='neo4j')
 
 #Kafka
 KAFKA_BROKER_URL = config('KAFKA_BROKER_URL', default='localhost:9092,')

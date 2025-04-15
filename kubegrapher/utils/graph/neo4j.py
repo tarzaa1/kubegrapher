@@ -1,6 +1,6 @@
+from kubegrapher.conf import DB_NAME
 from .base import GraphDB
 from neo4j import GraphDatabase
-
 
 class Neo4j(GraphDB):
     def __init__(self, URI, AUTH) -> None:
@@ -43,7 +43,7 @@ class Neo4j(GraphDB):
                 """
         summary = self.driver.execute_query(
             query,
-            database_='neo4j',
+            database_=DB_NAME,
         ).summary
 
         print("\n\nDeleted {nodes_deleted} nodes and {edges_deleted} relationships in {time} ms.".format(
