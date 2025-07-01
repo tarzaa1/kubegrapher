@@ -82,29 +82,21 @@ def merge_relationship_generic(type: str, from_type: str, to_type: str, to_prope
 
 def merge_relationship_service_to_pod():
     query = f"""
-    MATCH (s:Service {{id: $service_id}})-[:{Relations.HAS_SELECTOR}]->(l:Label)
-    WITH s, collect(l) AS selectorLst, count(l) AS selectorCount
+    MATCH (s:Service {{id: $service_id}}) -[:{Relations.HAS_SELECTOR}]-> (l:Label)
+    WITH s, collect(l) AS selectorLst
     MATCH (p:Pod)
-    OPTIONAL MATCH (p)-[:HAS_LABEL]->(lab:Label)
-    WITH s, p, selectorLst, selectorCount, collect(lab) AS podLabels
-    WITH s, p, selectorCount,
-        [label IN selectorLst WHERE label IN podLabels] AS matchedLabels
-    WHERE size(matchedLabels) = selectorCount
-    MERGE (s)-[:EXPOSES]->(p)
+    WHERE ALL (label IN selectorLst WHERE EXISTS((p) -[:{Relations.HAS_LABEL}]-> (label)))
+    MERGE (s) -[r:{Relations.EXPOSES}]-> (p)
     """
     return query
 
 def merge_relationship_pod_to_service():
     query = f"""
-    MATCH (p:Pod {{id: $pod_id}})-[:{Relations.HAS_LABEL}]->(l:Label)
-    WITH p, collect(l) AS labelLst, count(l) AS labelCount
+    MATCH (p:Pod {{id: $pod_id}}) -[:{Relations.HAS_LABEL}]-> (l:Label)
+    WITH p, collect(l) AS labelLst
     MATCH (s:Service)
-    OPTIONAL MATCH (s)-[:HAS_SELECTOR]->(sel:Label)
-    WITH p, s, labelLst, labelCount, collect(sel) AS serviceSelectors
-    WITH p, s, labelCount,
-        [label IN labelLst WHERE label IN serviceSelectors] AS matchedSelectors
-    WHERE size(matchedSelectors) = labelCount
-    MERGE (s)-[:EXPOSES]->(p)
+    WHERE ALL (selector IN labelLst WHERE EXISTS((s) -[:{Relations.HAS_SELECTOR}]-> (selector)))
+    MERGE (s) -[r:{Relations.EXPOSES}]-> (p)
     """
     return query
 
@@ -113,7 +105,7 @@ def merge_relationship_ingress_to_service():
     MATCH (i:Ingress {{id: $ingress_id, cluster_id: $cluster_id}})
     WITH i
     MATCH (s:Service {{name: $service_name, cluster_id: $cluster_id}})
-    MERGE (i)-[r:{Relations.ROUTES_TO}]->(s)
+    MERGE (i) -[r:{Relations.ROUTES_TO}]-> (s)
     """
     return query
 
@@ -123,19 +115,18 @@ def merge_relationship_service_to_ingress():
     WITH s
     MATCH (i:Ingress {{cluster_id: $cluster_id}})
     WHERE s.name IN i.service_names
-    MERGE (i)-[r:{Relations.ROUTES_TO}]->(s)
+    MERGE (i) -[r:{Relations.ROUTES_TO}]-> (s)
     """
     return query
 
-def set_k8snode_metrics(metrics: dict[str, any]):
+def set_k8snode_metrics(metrics: dict[str: any]):
     placeholders = _placeholders(metrics)
     query = f"""
-    MATCH (n:K8sNode {{name: $hostname}})-[{Relations.BELONGS_TO}]->(c:Cluster)
+    MATCH (n:K8sNode {{hostname: $hostname}}) -[{Relations.BELONGS_TO}]-> (c:Cluster)
     WHERE c.id = $cluster_id
     SET n += {{{placeholders}}}
     RETURN n
     """
     return query
-
 
     # https://neo4j.com/docs/cypher-manual/current/clauses/set/#set-setting-properties-using-map
