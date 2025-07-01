@@ -119,14 +119,24 @@ def merge_relationship_service_to_ingress():
     """
     return query
 
-def set_k8snode_metrics(metrics: dict[str: any]):
-    placeholders = _placeholders(metrics)
-    query = f"""
-    MATCH (n:K8sNode {{hostname: $hostname}}) -[{Relations.BELONGS_TO}]-> (c:Cluster)
-    WHERE c.id = $cluster_id
-    SET n += {{{placeholders}}}
+def set_k8snode_metrics():
+    query = """
+    UNWIND $data AS row
+    MATCH (n:K8sNode {hostname: row.hostname})-[:BELONGS_TO]->(c:Cluster {id: row.cluster_id})
+    SET n.usage_cpu = row.usage_cpu,
+        n.usage_memory = row.usage_memory
     RETURN n
     """
     return query
 
     # https://neo4j.com/docs/cypher-manual/current/clauses/set/#set-setting-properties-using-map
+
+def set_pod_metrics():
+    query = """
+    UNWIND $data AS row
+    MATCH (p:Pod {name: row.podName})-[:RUNS_CONTAINER]->(c:Container {name: row.containerName})
+    SET c.usage_cpu = row.usage_cpu,
+        c.usage_memory = row.usage_memory
+    RETURN c
+    """
+    return query
