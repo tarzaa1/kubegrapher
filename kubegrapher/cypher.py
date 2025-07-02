@@ -85,7 +85,7 @@ def merge_relationship_service_to_pod():
     MATCH (s:Service {{id: $service_id}}) -[:{Relations.HAS_SELECTOR}]-> (l:Label)
     WITH s, collect(l) AS selectorLst
     MATCH (p:Pod)
-    WHERE ALL (label IN selectorLst WHERE (p) -[:{Relations.HAS_LABEL}]-> (label))
+    WHERE ALL (label IN selectorLst WHERE EXISTS((p) -[:{Relations.HAS_LABEL}]-> (label)))
     MERGE (s) -[r:{Relations.EXPOSES}]-> (p)
     """
     return query
@@ -95,7 +95,7 @@ def merge_relationship_pod_to_service():
     MATCH (p:Pod {{id: $pod_id}}) -[:{Relations.HAS_LABEL}]-> (l:Label)
     WITH p, collect(l) AS labelLst
     MATCH (s:Service)
-    WHERE ALL (selector IN labelLst WHERE (s) -[:{Relations.HAS_SELECTOR}]-> (selector))
+    WHERE ALL (selector IN labelLst WHERE EXISTS((s) -[:{Relations.HAS_SELECTOR}]-> (selector)))
     MERGE (s) -[r:{Relations.EXPOSES}]-> (p)
     """
     return query
@@ -128,6 +128,7 @@ def set_k8snode_metrics():
     RETURN n
     """
     return query
+
     # https://neo4j.com/docs/cypher-manual/current/clauses/set/#set-setting-properties-using-map
 
 def set_pod_metrics():

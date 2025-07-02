@@ -7,4 +7,4 @@ class Relations(Enum):
     HAS_TAINT, STORES_IMAGE, EXPOSES, ROUTES_TO = range(13)
 
     def __get__(self, instance, owner):
-            return self.name
+            return str(self.name)
