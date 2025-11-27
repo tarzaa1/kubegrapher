@@ -208,17 +208,23 @@ def parse_container(container: dict[str, any], containerStatus: dict[str, any]) 
             cpu_limit = resources.get('limits', {}).get('cpu')
             memory_limit = resources.get('limits', {}).get('memory')
 
-            properties["request_cpu"] = extract_number(cpu_request)
-            properties["request_memory"] = extract_number(memory_request)
-            properties["limit_cpu"] = extract_number(cpu_limit)
-            properties["limit_memory"] = extract_number(memory_limit)
+            properties["request_cpu"] = extract_number(cpu_request) or 0
+            properties["request_memory"] = extract_number(memory_request) or 0
+            properties["limit_cpu"] = extract_number(cpu_limit) or 0
+            properties["limit_memory"] = extract_number(memory_limit) or 0
 
         container_id = containerStatus.get('containerID', '')
         image_name = containerStatus.get('image', '')
 
         configmap_name = None
-        if 'envFrom' in container.keys() and 'configMapRef' in container['envFrom'][0]:
-            configmap_name = container['envFrom'][0]['configMapRef'].get('name', None)
+        env_from = container.get('envFrom') or []
+        if isinstance(env_from, list):
+            for item in env_from:
+                if isinstance(item, dict) and 'configMapRef' in item:
+                    cmref = item.get('configMapRef') or {}
+                    configmap_name = cmref.get('name')
+                    break
+
 
         return Container(container_id, image_name, properties, configmap_name)
     except Exception as e:
@@ -328,9 +334,11 @@ def parse_ingress(ingress: dict[str, any], topic_name: str) -> Ingress:
         logging.error(f"Error parsing Ingress: {e}")
         return None
 
-def extract_number(string):
-    match = re.match(r"(\d+)", string)
-    if match:
-        return int(match.group(1))
-    else:
+def extract_number(x):
+    if x is None:
         return None
+    if isinstance(x, (int, float)):
+        return int(x)
+    x = str(x)
+    m = re.match(r"(\d+)", x)
+    return int(m.group(1)) if m else None
